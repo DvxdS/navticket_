@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from datetime import timedelta
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,7 +23,22 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 AUTH_USER_MODEL = "accounts.User"
 
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+SECRET_KEY = os.environ.get('SECRET_KEY')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# For CORS
+
+
+# CORS Security
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Never set to True in production
+
+# Security Headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -44,8 +61,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
     # Third party
     'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
+    #'django_ratelimit',
     
    
    #apps
@@ -59,6 +80,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -67,6 +89,23 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# JWT Configuration
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': os.environ.get('JWT_SECRET_KEY'),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# Supabase Configuration
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY')
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
 
 ROOT_URLCONF = 'navticket.urls'
 
@@ -107,7 +146,14 @@ DATABASES = {
     }
 }
 
-
+""""CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'navticket_cache_table',
+    }
+}"""
+# At the end of settings.py file
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
