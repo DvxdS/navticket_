@@ -94,3 +94,23 @@ class CompanyRegistrationSerializer(serializers.ModelSerializer):
         if BusCompany.objects.filter(email=value).exists():
             raise serializers.ValidationError('A company with this email already exists.')
         return value
+
+
+class CompanyLoginSerializer(serializers.Serializer):
+    """Company user login serializer"""
+    
+    email = serializers.EmailField()
+    password = serializers.CharField(
+        style={'input_type': 'password'},
+        write_only=True
+    )
+    
+    def validate(self, attrs):
+        email = attrs.get('email', '').lower()
+        password = attrs.get('password', '')
+        if not email or not password:
+            raise serializers.ValidationError('Email and password are required.')
+        return {
+            'email': email,
+            'password': password
+        }
