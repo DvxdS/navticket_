@@ -42,6 +42,27 @@ class RouteCreateSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """Cross-field validation"""
+        request = self.context.get('request')
+        # Ensure authenticated user has a valid company
+        if not request or not getattr(request, 'user', None):
+            raise serializers.ValidationError('Authentication context missing')
+        user = request.user
+        company = getattr(user, 'company', None)
+        if company is None:
+            raise serializers.ValidationError('Your account is not linked to a company')
+        # Confirm the company exists in DB and is active/verified
+        try:
+            from apps.accounts.models import BusCompany  # local import to avoid circular
+            if not BusCompany.objects.filter(pk=company.pk, is_active=True).exists():
+                raise serializers.ValidationError('Your company does not exist or is inactive')
+            # If verification status field exists, enforce it
+            fresh_company = BusCompany.objects.filter(pk=company.pk).only('verification_status').first()
+            if fresh_company and getattr(fresh_company, 'verification_status', 'pending') != 'verified':
+                raise serializers.ValidationError('Company must be verified to create routes')
+        except Exception:
+            # If lookup fails for any reason, block creation
+            raise serializers.ValidationError('Unable to validate company association')
+
         if attrs['origin_city'] == attrs['destination_city']:
             raise serializers.ValidationError(
                 "Origin and destination cities cannot be the same"
@@ -51,8 +72,16 @@ class RouteCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Auto-assign company from request user"""
         request = self.context.get('request')
-        if request and hasattr(request.user, 'company'):
-            validated_data['bus_company'] = request.user.company
+        if request and hasattr(request.user, 'company') and request.user.company:
+            # Re-fetch company to ensure it exists and is valid at DB level
+            from apps.accounts.models import BusCompany
+            company_id = request.user.company_id
+            company = BusCompany.objects.filter(pk=company_id, is_active=True).first()
+            if not company:
+                raise serializers.ValidationError({'company': 'Linked company does not exist or is inactive'})
+            if getattr(company, 'verification_status', 'pending') != 'verified':
+                raise serializers.ValidationError({'company': 'Company must be verified to create routes'})
+            validated_data['bus_company'] = company
         return super().create(validated_data)
 
 

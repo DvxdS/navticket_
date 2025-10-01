@@ -95,12 +95,16 @@ def traveler_login(request):
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Backend/apps/accounts/views.py
+# Replace your company_register function with this:
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def company_register(request):
     """Register a new bus company and create a company admin user"""
     company_serializer = CompanyRegistrationSerializer(data=request.data)
     user_serializer = UserRegistrationSerializer(data=request.data)
+    
     if company_serializer.is_valid() and user_serializer.is_valid():
         try:
             # Register admin in Supabase first
@@ -121,34 +125,58 @@ def company_register(request):
                 phone=company_serializer.validated_data['phone'],
                 address=company_serializer.validated_data.get('address', ''),
                 business_license=company_serializer.validated_data.get('business_license', ''),
-                tax_number=company_serializer.validated_data.get('tax_number', '')
+                tax_number=company_serializer.validated_data.get('tax_number', ''),
+                verification_status='verified',  # Auto-verify for testing (change to 'pending' in production)
+                is_active=True
             )
             
             # Create Django admin user linked to the company
             admin_user = User.objects.create_user(
                 username=user_serializer.validated_data['email'],
                 email=user_serializer.validated_data['email'],
+                password=user_serializer.validated_data['password'],  # ← ADDED: Set password
                 first_name=user_serializer.validated_data['first_name'],
                 last_name=user_serializer.validated_data['last_name'],
                 phone=user_serializer.validated_data.get('phone', ''),
-                role=User.COMPANY_ADMIN
+                role=User.COMPANY_ADMIN,
+                company=company  # ← ADDED: Link user to company!
             )
             
+            # Generate JWT tokens for immediate login
+            refresh = RefreshToken.for_user(admin_user)
+            access_token = refresh.access_token
+            
             return Response({
-                'message': 'Company registration received. Await verification to activate your account.',
-                'company_id': company.id,
-                'admin_user_id': admin_user.id
+                'message': 'Company registration successful!',
+                'company': {
+                    'id': company.id,
+                    'name': company.name,
+                    'email': company.email,
+                    'verification_status': company.verification_status
+                },
+                'user': {
+                    'id': admin_user.id,
+                    'email': admin_user.email,
+                    'first_name': admin_user.first_name,
+                    'last_name': admin_user.last_name,
+                    'role': admin_user.role
+                },
+                'access': str(access_token),
+                'refresh': str(refresh)
             }, status=status.HTTP_201_CREATED)
+            
         except Exception as e:
             logger.error(f"Company registration failed: {e}")
             return Response({
-                'error': 'Company registration failed. Please try again.'
+                'error': f'Company registration failed: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
     
     # Merge errors from both serializers
     errors = {}
-    errors.update(company_serializer.errors)
-    errors.update(user_serializer.errors)
+    if not company_serializer.is_valid():
+        errors.update(company_serializer.errors)
+    if not user_serializer.is_valid():
+        errors.update(user_serializer.errors)
     return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -14,9 +14,17 @@ class IsCompanyUser(BasePermission):
         # Check if user is authenticated
         if not request.user or not request.user.is_authenticated:
             return False
-            
-        # Check if user has a company association
-        return hasattr(request.user, 'company') and request.user.company is not None
+        
+        # Use company_id to avoid triggering DB fetch that may raise DoesNotExist
+        company_id = getattr(request.user, 'company_id', None)
+        if not company_id:
+            return False
+        # Ensure the company row actually exists
+        try:
+            from apps.accounts.models import BusCompany
+            return BusCompany.objects.filter(pk=company_id).exists()
+        except Exception:
+            return False
 
 
 class IsVerifiedCompany(BasePermission):
@@ -29,12 +37,15 @@ class IsVerifiedCompany(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-            
-        if not hasattr(request.user, 'company') or not request.user.company:
+        company_id = getattr(request.user, 'company_id', None)
+        if not company_id:
             return False
-            
-        # Check if company is verified
-        return request.user.company.verification_status == 'verified'
+        try:
+            from apps.accounts.models import BusCompany
+            company = BusCompany.objects.filter(pk=company_id).only('verification_status').first()
+            return bool(company and company.verification_status == 'verified')
+        except Exception:
+            return False
 
 
 class IsCompanyOwnerOrReadOnly(BasePermission):

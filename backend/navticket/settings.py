@@ -23,33 +23,16 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 AUTH_USER_MODEL = "accounts.User"
 
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
-SECRET_KEY = os.environ.get('SECRET_KEY')
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-
-# For CORS
-
-
-# CORS Security
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False  # Never set to True in production
-
-# Security Headers
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-m3ks!yo^#ci7k10i&$us*k0-e%_z@v&x+bo4w4z%*)t50t=t&$'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-m3ks!yo^#ci7k10i&$us*k0-e%_z@v&x+bo4w4z%*)t50t=t&$')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -67,10 +50,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
-    #'django_ratelimit',
     
-   
-   #apps
     # Apps - referencing AppConfig classes
     'apps.accounts.apps.AccountsConfig',
     'apps.locations.apps.LocationsConfig',
@@ -90,23 +70,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-# JWT Configuration
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': os.environ.get('JWT_SECRET_KEY'),
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
-
-# Supabase Configuration
-SUPABASE_URL = os.environ.get('SUPABASE_URL')
-SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY')
-SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
-JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
 
 ROOT_URLCONF = 'navticket.urls'
 
@@ -140,21 +103,13 @@ DATABASES = {
         "HOST": os.getenv("DB_HOST"),
         "PORT": os.getenv("DB_PORT"),
         "OPTIONS": {
-            "sslmode": "disable",  # Supabase requires SSL
+            "sslmode": "disable",
             "connect_timeout": 60,
         },
         'CONN_MAX_AGE': 60,
     }
 }
 
-""""CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'navticket_cache_table',
-    }
-}"""
-# At the end of settings.py file
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -196,3 +151,79 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# ============================================================
+# REST FRAMEWORK CONFIGURATION (THIS WAS MISSING!)
+# ============================================================
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+}
+
+
+# ============================================================
+# JWT CONFIGURATION (FIXED)
+# ============================================================
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,  # Use SECRET_KEY instead of separate JWT key
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    'JWK_URL': None,
+    'LEEWAY': 0,
+
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+
+    'JTI_CLAIM': 'jti',
+
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+}
+
+
+# ============================================================
+# CORS CONFIGURATION
+# ============================================================
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Never set to True in production
+
+
+# ============================================================
+# SECURITY HEADERS
+# ============================================================
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+
+# ============================================================
+# SUPABASE CONFIGURATION
+# ============================================================
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY')
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')

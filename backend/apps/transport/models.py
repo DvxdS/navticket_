@@ -86,18 +86,7 @@ class Route(models.Model):
         return round(self.estimated_duration_minutes / 60, 1)
 
 
-# Trip status choices
-STATUS_CHOICES = [
-    ('draft', 'Draft'),
-    ('scheduled', 'Scheduled'),
-    ('cancelled', 'Cancelled'),
-    ('completed', 'Completed'),
-    ('in_progress', 'In Progress'),
-    ('delayed', 'Delayed'),
-    ('on_time', 'On Time'),
-    ('early', 'Early'),
-    ('late', 'Late'),
-]
+
 
 BUS_TYPE_CHOICES = [
     ('standard', 'Standard'),
@@ -110,6 +99,18 @@ BUS_TYPE_CHOICES = [
 
 class Trip(models.Model):
     """Scheduled departures with specific timing and capacity"""
+    # Trip status choices
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('scheduled', 'Scheduled'),
+        ('cancelled', 'Cancelled'),
+        ('completed', 'Completed'),
+        ('in_progress', 'In Progress'),
+        ('delayed', 'Delayed'),
+        ('on_time', 'On Time'),
+        ('early', 'Early'),
+        ('late', 'Late'),
+]
     route = models.ForeignKey(
         Route, 
         on_delete=models.CASCADE,
@@ -240,8 +241,16 @@ class Trip(models.Model):
 
     def can_be_booked(self):
         """Check if trip can accept new bookings"""
+        from django.utils import timezone
+        
+        # Make sure comparison uses timezone-aware datetime
+        now = timezone.now()
+        trip_datetime = timezone.make_aware(
+            datetime.combine(self.departure_date, self.departure_time)
+        ) if timezone.is_naive(datetime.combine(self.departure_date, self.departure_time)) else datetime.combine(self.departure_date, self.departure_time)
+        
         return (
             self.status in ['scheduled', 'on_time'] and
             self.available_seats > 0 and
-            self.departure_datetime > timezone.now()
+            trip_datetime > now
         )
