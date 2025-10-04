@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation de Réservation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #1e40af;
+        }
+        .header h1 {
+            color: #1e40af;
+            margin: 0;
+            font-size: 28px;
+        }
+        .success-badge {
+            background-color: #10b981;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .booking-ref {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .booking-ref strong {
+            color: #dc2626;
+            font-size: 20px;
+        }
+        .section {
+            margin: 25px 0;
+            padding: 20px;
+            background-color: #f9fafb;
+            border-radius: 8px;
+        }
+        .section h2 {
+            color: #1e40af;
+            margin-top: 0;
+            font-size: 18px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #6b7280;
+        }
+        .info-value {
+            color: #111827;
+            text-align: right;
+        }
+        .route {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e40af;
+            margin: 20px 0;
+        }
+        .qr-section {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #eff6ff;
+            border-radius: 8px;
+        }
+        .qr-section img {
+            max-width: 250px;
+            border: 3px solid #1e40af;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: white;
+        }
+        .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background-color: #1e40af;
+            color: white !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 5px;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #1e3a8a;
+        }
+        .button-secondary {
+            background-color: #10b981;
+        }
+        .button-secondary:hover {
+            background-color: #059669;
+        }
+        .cta-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .instructions {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #92400e;
+        }
+        .instructions ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #1e40af;
+            text-decoration: none;
+        }
+        .price-highlight {
+            background-color: #dcfce7;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .price-highlight .amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #15803d;
+        }
+        @media only screen and (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+            .info-row {
+                flex-direction: column;
+            }
+            .info-value {
+                text-align: left;
+                margin-top: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎫 {{ company_name }}</h1>
+            <div class="success-badge">✅ RÉSERVATION CONFIRMÉE</div>
+        </div>
+
+        <!-- Booking Reference -->
+        <div class="booking-ref">
+            <p style="margin: 0;">Votre référence de réservation :</p>
+            <strong>{{ booking.booking_reference }}</strong>
+        </div>
+
+        <!-- Route -->
+        <div class="route">
+            {{ route.origin_city.name }} 🚌 {{ route.destination_city.name }}
+        </div>
+
+        <!-- Trip Details -->
+        <div class="section">
+            <h2>🚌 Détails du Voyage</h2>
+            <div class="info-row">
+                <span class="info-label">Compagnie de Transport :</span>
+                <span class="info-value">{{ company }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Départ :</span>
+                <span class="info-value">{{ trip.departure_datetime|date:"d M Y, H:i" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Arrivée :</span>
+                <span class="info-value">{{ trip.arrival_datetime|date:"d M Y, H:i" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Durée :</span>
+                <span class="info-value">{{ route.estimated_duration_minutes }}m</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Numéro de Siège :</span>
+                <span class="info-value">{% if passenger.seat_number %}{{ passenger.seat_number }}{% else %}Sera attribué{% endif %}</span>
+            </div>
+        </div>
+
+        <!-- Passenger Details -->
+        <div class="section">
+            <h2>👤 Informations Passager</h2>
+            <div class="info-row">
+                <span class="info-label">Nom :</span>
+                <span class="info-value">{{ passenger.first_name }} {{ passenger.last_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Téléphone :</span>
+                <span class="info-value">{{ passenger.phone }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email :</span>
+                <span class="info-value">{{ passenger.email }}</span>
+            </div>
+        </div>
+
+        <!-- Payment Summary -->
+        <div class="section">
+            <h2>💰 Récapitulatif de Paiement</h2>
+            <div class="info-row">
+                <span class="info-label">Prix du Billet :</span>
+                <span class="info-value">{{ booking.ticket_price }} XOF</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Frais de Plateforme :</span>
+                <span class="info-value">{{ booking.platform_fee }} XOF</span>
+            </div>
+            <div class="price-highlight">
+                <div>Montant Total Payé</div>
+                <div class="amount">{{ booking.total_amount }} XOF</div>
+            </div>
+        </div>
+
+       <!-- QR Code -->
+        <div class="qr-section">
+            <h2 style="color: #1e40af; margin-top: 0;">📱 Votre Billet d'Embarquement</h2>
+            <p>Présentez ce code QR lors de l'embarquement</p>
+            <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
+                <strong>Le code QR est disponible dans les pièces jointes :</strong><br>
+                • Image PNG du code QR<br>
+                • Billet PDF complet avec code QR intégré
+            </p>
+        </div>
+
+        <!-- Call to Action -->
+<div class="cta-section">
+    <p><strong>📎 Pièces jointes incluses :</strong></p>
+    <div style="background-color: #eff6ff; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        <p style="margin: 5px 0;">✅ <strong>Billet électronique PDF</strong> avec code QR</p>
+        <p style="margin: 5px 0;">✅ <strong>Événement calendrier</strong> (navticket_booking_{{ booking.booking_reference }}.ics)</p>
+        <p style="margin: 5px 0;">✅ <strong>Code QR PNG</strong> (qr_code_{{ booking.booking_reference }}.png)</p>
+    </div>
+    
+    <div style="background-color: #dbeafe; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        <p style="margin: 5px 0; color: #1e40af;"><strong>📅 Pour ajouter à votre calendrier :</strong></p>
+        <ol style="text-align: left; margin: 10px 0; padding-left: 25px; color: #374151;">
+            <li style="margin: 8px 0;">Ouvrez la pièce jointe <strong>.ics</strong></li>
+            <li style="margin: 8px 0;">Votre application calendrier s'ouvrira automatiquement</li>
+            <li style="margin: 8px 0;">Cliquez sur "Ajouter" ou "Enregistrer"</li>
+            <li style="margin: 8px 0;">Les rappels seront configurés automatiquement</li>
+        </ol>
+        <p style="font-size: 12px; color: #6b7280; margin: 10px 0;">
+            Compatible avec : Google Calendar, Outlook, Apple Calendar, et autres
+        </p>
+    </div>
+</div>
+
+        <!-- Important Instructions -->
+        <div class="instructions">
+            <h3>⚠️ Informations Importantes de Voyage</h3>
+            <ul>
+                <li><strong>Arrivez 30 minutes à l'avance</strong> à {{ route.origin_city.name }}</li>
+                <li><strong>Apportez une pièce d'identité valide</strong> (CNI, Passeport ou Permis de conduire)</li>
+                <li><strong>Gardez votre code QR prêt</strong> sur votre téléphone ou billet imprimé</li>
+                <li><strong>Rappels calendrier</strong> configurés automatiquement (24h, 2h et 30min avant le départ)</li>
+                <li>Contactez la compagnie de transport pour toute question spécifique au voyage</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Besoin d'Aide ?</strong></p>
+            <p>
+                📧 Email : <a href="mailto:{{ support_email }}">{{ support_email }}</a><br>
+                📞 Téléphone : {{ support_phone }}<br>
+                🌐 Site Web : <a href="https://navticket.com">www.navticket.com</a>
+            </p>
+            <p style="margin-top: 20px;">
+                Merci d'avoir choisi {{ company_name }} !<br>
+                Bon voyage et bonne route ! 🚌✨
+            </p>
+        </div>
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #92400e;"><strong>💡 Astuce :</strong></p>
+            <p style="margin: 5px 0; font-size: 13px; color: #78350f;">
+                Si le fichier .ics ne s'ouvre pas automatiquement, téléchargez-le et importez-le manuellement dans votre application calendrier.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
