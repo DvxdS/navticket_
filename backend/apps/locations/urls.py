@@ -1,18 +1,15 @@
 # Backend/apps/locations/urls.py
 
-from django.urls import path
-from rest_framework import generics
-from .models import City
-from apps.transport.serializers import CitySerializer
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from apps.locations.views import CityViewSet, BusStationViewSet
 
 app_name = 'locations'
 
-class CityListView(generics.ListAPIView):
-    """Public endpoint to list all active cities"""
-    queryset = City.objects.filter(is_active=True).order_by('name')
-    serializer_class = CitySerializer
+router = DefaultRouter()
+router.register(r'cities', CityViewSet, basename='city')
+router.register(r'stations', BusStationViewSet, basename='station')
 
 urlpatterns = [
-    # Public city list for frontend dropdowns
-    path('cities/', CityListView.as_view(), name='city-list'),
+    path('', include(router.urls)),
 ]

@@ -4,24 +4,28 @@ from rest_framework import generics, status, filters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
 from datetime import datetime, date
+from rest_framework import viewsets
 
 from .models import Route, Trip
 from .serializers import (
     RouteListSerializer, RouteCreateSerializer, 
     TripListSerializer, TripCreateSerializer, 
     TripUpdateSerializer, TripDetailSerializer,
-    TripSearchSerializer
+    TripSearchSerializer,
+    TripTemplateSerializer, TripTemplateCreateSerializer,
+    TripTemplateListSerializer, TripTemplateSummarySerializer
 )
 from shared.permissions import (
     IsCompanyUser, IsVerifiedCompany, 
     IsCompanyOwner, IsTripOwner
 )
 
-
+from apps.transport.models import TripTemplate
 # ===================== ROUTE VIEWS =====================
 
 class RouteListCreateView(generics.ListCreateAPIView):
@@ -379,3 +383,301 @@ def trip_calendar(request):
         'calendar_data': calendar_data,
         'total_trips': trips.count()
     })
+class TripTemplateViewSet(viewsets.ModelViewSet):
+    """
+    CRUD endpoints pour les modèles de trajets récurrents
+    Les compagnies peuvent créer des horaires qui génèrent automatiquement des trajets
+    
+    Endpoints:
+    - GET /api/v1/transport/templates/ - Liste des modèles de la compagnie
+    - POST /api/v1/transport/templates/ - Créer un nouveau modèle
+    - GET /api/v1/transport/templates/{id}/ - Détails d'un modèle
+    - PUT /api/v1/transport/templates/{id}/ - Mettre à jour un modèle
+    - PATCH /api/v1/transport/templates/{id}/ - Mise à jour partielle
+    - DELETE /api/v1/transport/templates/{id}/ - Supprimer un modèle
+    - POST /api/v1/transport/templates/{id}/generate/ - Générer des trajets manuellement
+    - GET /api/v1/transport/templates/{id}/preview/ - Prévisualiser les trajets à générer
+    - POST /api/v1/transport/templates/{id}/activate/ - Activer le modèle
+    - POST /api/v1/transport/templates/{id}/deactivate/ - Désactiver le modèle
+    - GET /api/v1/transport/templates/summary/ - Résumé des modèles (dashboard)
+    """
+    
+    serializer_class = TripTemplateSerializer
+    permission_classes = [IsAuthenticated, IsCompanyUser]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = [
+        'is_active',
+        'bus_type',
+        'departure_station__city',
+        'arrival_station__city'
+    ]
+    search_fields = [
+        'bus_number',
+        'departure_station__name',
+        'arrival_station__name',
+        'departure_station__city__name',
+        'arrival_station__city__name'
+    ]
+    ordering_fields = [
+        'departure_time',
+        'price',
+        'created_at',
+        'valid_from'
+    ]
+    ordering = ['departure_station__city__name', 'departure_time']
+    
+    def get_queryset(self):
+        """
+        Les compagnies voient uniquement leurs propres modèles
+        Optimisé avec select_related et prefetch_related
+        """
+        user = self.request.user
+        
+        if hasattr(user, 'company') and user.company:
+            return TripTemplate.objects.filter(
+                bus_company=user.company
+            ).select_related(
+                'bus_company',
+                'departure_station',
+                'departure_station__city',
+                'arrival_station',
+                'arrival_station__city'
+            ).prefetch_related(
+                'generated_trips'
+            ).order_by('departure_station__city__name', 'departure_time')
+        
+        return TripTemplate.objects.none()
+    
+    def get_serializer_class(self):
+        """Utiliser différents serializers selon l'action"""
+        if self.action in ['create', 'update', 'partial_update']:
+            return TripTemplateCreateSerializer
+        elif self.action == 'list':
+            return TripTemplateListSerializer
+        elif self.action == 'summary':
+            return TripTemplateSummarySerializer
+        return TripTemplateSerializer
+    
+    def perform_destroy(self, instance):
+        """
+        Suppression douce - désactive le modèle au lieu de le supprimer
+        Les trajets déjà générés restent intacts
+        """
+        instance.is_active = False
+        instance.save()
+    
+    @action(detail=True, methods=['post'])
+    def generate(self, request, pk=None):
+        """
+        Générer manuellement des trajets depuis ce modèle
+        
+        POST /api/v1/transport/templates/{id}/generate/
+        Body: {
+            "days_ahead": 30  // Optionnel, par défaut 30 jours
+        }
+        """
+        template = self.get_object()
+        days_ahead = request.data.get('days_ahead', 30)
+        
+        # Valider days_ahead
+        try:
+            days_ahead = int(days_ahead)
+            if days_ahead < 1 or days_ahead > 90:
+                return Response(
+                    {"error": "days_ahead doit être entre 1 et 90"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "days_ahead doit être un nombre entier"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not template.is_active:
+            return Response(
+                {"error": "Le modèle doit être actif pour générer des trajets"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # TODO: Appeler le service de génération de trajets
+        # from apps.transport.services.trip_generator import TripGeneratorService
+        # generated_count = TripGeneratorService.generate_trips_for_template(template, days_ahead)
+        
+        # Pour l'instant, retourner un message
+        return Response({
+            "message": f"Génération de trajets pour les {days_ahead} prochains jours",
+            "template_id": template.id,
+            "template": template.route_display,
+            "status": "En attente du service de génération"
+            # "trips_generated": generated_count  // À ajouter après implémentation
+        })
+    
+    @action(detail=True, methods=['get'])
+    def preview(self, request, pk=None):
+        """
+        Prévisualiser les trajets qui seront générés
+        
+        GET /api/v1/transport/templates/{id}/preview/?days_ahead=7
+        """
+        from datetime import datetime, timedelta
+        
+        template = self.get_object()
+        days_ahead = int(request.query_params.get('days_ahead', 7))
+        
+        if days_ahead < 1 or days_ahead > 90:
+            return Response(
+                {"error": "days_ahead doit être entre 1 et 90"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Calculer les dates où des trajets seront générés
+        preview_dates = []
+        start_date = max(timezone.now().date(), template.valid_from)
+        
+        for i in range(days_ahead):
+            check_date = start_date + timedelta(days=i)
+            
+            # Vérifier si valide à cette date
+            if template.is_valid_on_date(check_date):
+                day_name = dict(TripTemplate.DAYS_OF_WEEK)[check_date.isoweekday()]
+                preview_dates.append({
+                    'date': check_date,
+                    'day_name': day_name,
+                    'departure_time': template.departure_time,
+                    'price': template.price,
+                    'seats': template.total_seats
+                })
+        
+        return Response({
+            'template_id': template.id,
+            'route': template.route_display,
+            'days_ahead': days_ahead,
+            'trips_count': len(preview_dates),
+            'preview': preview_dates[:10]  # Afficher max 10 pour aperçu
+        })
+    
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        """
+        Activer un modèle de trajet
+        
+        POST /api/v1/transport/templates/{id}/activate/
+        """
+        template = self.get_object()
+        
+        if template.is_active:
+            return Response(
+                {"message": "Le modèle est déjà actif"},
+                status=status.HTTP_200_OK
+            )
+        
+        template.is_active = True
+        template.save()
+        
+        serializer = self.get_serializer(template)
+        return Response({
+            "message": f"Modèle '{template.route_display}' activé avec succès",
+            "template": serializer.data
+        })
+    
+    @action(detail=True, methods=['post'])
+    def deactivate(self, request, pk=None):
+        """
+        Désactiver un modèle de trajet
+        
+        POST /api/v1/transport/templates/{id}/deactivate/
+        """
+        template = self.get_object()
+        
+        if not template.is_active:
+            return Response(
+                {"message": "Le modèle est déjà désactivé"},
+                status=status.HTTP_200_OK
+            )
+        
+        template.is_active = False
+        template.save()
+        
+        serializer = self.get_serializer(template)
+        return Response({
+            "message": f"Modèle '{template.route_display}' désactivé avec succès",
+            "template": serializer.data
+        })
+    
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """
+        Résumé des modèles pour le dashboard
+        
+        GET /api/v1/transport/templates/summary/
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        active_count = queryset.filter(is_active=True).count()
+        inactive_count = queryset.filter(is_active=False).count()
+        
+        # Statistiques par type de bus
+        by_bus_type = {}
+        for choice in TripTemplate._meta.get_field('bus_type').choices:
+            bus_type_code = choice[0]
+            bus_type_label = choice[1]
+            count = queryset.filter(bus_type=bus_type_code, is_active=True).count()
+            if count > 0:
+                by_bus_type[bus_type_label] = count
+        
+        # Modèles récents
+        recent_templates = queryset.order_by('-created_at')[:5]
+        serializer = TripTemplateSummarySerializer(recent_templates, many=True)
+        
+        return Response({
+            'total_templates': queryset.count(),
+            'active_templates': active_count,
+            'inactive_templates': inactive_count,
+            'by_bus_type': by_bus_type,
+            'recent_templates': serializer.data
+        })
+    
+    @action(detail=False, methods=['get'])
+    def active(self, request):
+        """
+        Liste uniquement les modèles actifs
+        
+        GET /api/v1/transport/templates/active/
+        """
+        queryset = self.get_queryset().filter(is_active=True)
+        serializer = TripTemplateListSerializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def generated_trips(self, request, pk=None):
+        """
+        Voir tous les trajets générés depuis ce modèle
+        
+        GET /api/v1/transport/templates/{id}/generated_trips/
+        """
+        template = self.get_object()
+        
+        # Filtrer par date si fournie
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        
+        trips = template.generated_trips.all()
+        
+        if date_from:
+            trips = trips.filter(departure_date__gte=date_from)
+        
+        if date_to:
+            trips = trips.filter(departure_date__lte=date_to)
+        
+        trips = trips.order_by('departure_date', 'departure_time')
+        
+        # Utiliser le TripSerializer existant
+        from apps.transport.serializers import TripSerializer
+        serializer = TripSerializer(trips, many=True, context={'request': request})
+        
+        return Response({
+            'template_id': template.id,
+            'route': template.route_display,
+            'total_generated_trips': trips.count(),
+            'trips': serializer.data
+        })

@@ -3,9 +3,292 @@
 from rest_framework import serializers
 from django.utils import timezone
 from datetime import datetime, time, date
-from .models import Route, Trip
-from apps.locations.models import City
+from .models import Route, Trip, TripTemplate
+from apps.locations.models import City, BusStation
+from apps.locations.serializers import BusStationSerializer
 
+class TripTemplateSerializer(serializers.ModelSerializer):
+    """
+    Serializer complet pour TripTemplate
+    Utilisé pour l'affichage des modèles de trajets récurrents
+    """
+    
+    bus_company_name = serializers.CharField(
+        source='bus_company.name',
+        read_only=True
+    )
+    
+    departure_station = BusStationSerializer(read_only=True)
+    arrival_station = BusStationSerializer(read_only=True)
+    
+    # Propriétés calculées
+    route_display = serializers.CharField(read_only=True)
+    duration_hours = serializers.FloatField(read_only=True)
+    operates_on_display = serializers.CharField(read_only=True)
+    
+    # Choix pour les jours
+    days_choices = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TripTemplate
+        fields = [
+            'id',
+            'bus_company',
+            'bus_company_name',
+            'departure_station',
+            'arrival_station',
+            'departure_time',
+            'duration_minutes',
+            'operates_on_days',
+            'operates_on_display',
+            'days_choices',
+            'bus_type',
+            'bus_number',
+            'total_seats',
+            'price',
+            'valid_from',
+            'valid_until',
+            'is_active',
+            'route_display',
+            'duration_hours',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = [
+            'id',
+            'bus_company',
+            'bus_company_name',
+            'route_display',
+            'duration_hours',
+            'operates_on_display',
+            'created_at',
+            'updated_at'
+        ]
+    
+    def get_days_choices(self, obj):
+        """Retourne les choix de jours en français"""
+        return [
+            {'value': day[0], 'label': day[1]} 
+            for day in TripTemplate.DAYS_OF_WEEK
+        ]
+
+
+class TripTemplateCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer simplifié pour créer/modifier des modèles de trajets
+    """
+    
+    departure_station_id = serializers.PrimaryKeyRelatedField(
+        queryset=BusStation.objects.filter(is_active=True),
+        source='departure_station',
+        write_only=True,
+        help_text="ID de la gare de départ"
+    )
+    
+    arrival_station_id = serializers.PrimaryKeyRelatedField(
+        queryset=BusStation.objects.filter(is_active=True),
+        source='arrival_station',
+        write_only=True,
+        help_text="ID de la gare d'arrivée"
+    )
+    
+    class Meta:
+        model = TripTemplate
+        fields = [
+            'departure_station_id',
+            'arrival_station_id',
+            'departure_time',
+            'duration_minutes',
+            'operates_on_days',
+            'bus_type',
+            'bus_number',
+            'total_seats',
+            'price',
+            'valid_from',
+            'valid_until',
+            'is_active'
+        ]
+    
+    def validate_operates_on_days(self, value):
+        """Valider la liste des jours d'opération"""
+        if not value or not isinstance(value, list):
+            raise serializers.ValidationError(
+                "Doit spécifier au moins un jour d'opération"
+            )
+        
+        if not value:
+            raise serializers.ValidationError(
+                "Doit sélectionner au moins un jour"
+            )
+        
+        # Vérifier que tous les jours sont entre 1-7
+        invalid_days = [day for day in value if day not in range(1, 8)]
+        if invalid_days:
+            raise serializers.ValidationError(
+                f"Jours invalides: {invalid_days}. Les jours doivent être entre 1 (Lundi) et 7 (Dimanche)"
+            )
+        
+        return value
+    
+    def validate(self, data):
+        """Validation globale"""
+        request = self.context.get('request')
+        
+        # Valider que les gares sont différentes
+        if data.get('departure_station') == data.get('arrival_station'):
+            raise serializers.ValidationError({
+                'arrival_station_id': "La gare d'arrivée doit être différente de la gare de départ"
+            })
+        
+        # Valider que les gares appartiennent à la compagnie de l'utilisateur
+        if request and hasattr(request.user, 'company'):
+            user_company = request.user.company
+            
+            departure_station = data.get('departure_station')
+            arrival_station = data.get('arrival_station')
+            
+            if departure_station and departure_station.company != user_company:
+                raise serializers.ValidationError({
+                    'departure_station_id': "La gare de départ doit appartenir à votre compagnie"
+                })
+            
+            if arrival_station and arrival_station.company != user_company:
+                raise serializers.ValidationError({
+                    'arrival_station_id': "La gare d'arrivée doit appartenir à votre compagnie"
+                })
+        
+        # Valider les dates
+        valid_from = data.get('valid_from')
+        valid_until = data.get('valid_until')
+        
+        if valid_until and valid_from and valid_until < valid_from:
+            raise serializers.ValidationError({
+                'valid_until': "La date de fin doit être après la date de début"
+            })
+        
+        return data
+    
+    def create(self, validated_data):
+        """Auto-assigner la compagnie depuis l'utilisateur authentifié"""
+        request = self.context.get('request')
+        
+        if not request or not hasattr(request.user, 'company') or not request.user.company:
+            raise serializers.ValidationError(
+                "L'utilisateur doit être associé à une compagnie de bus"
+            )
+        
+        validated_data['bus_company'] = request.user.company
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        """Empêcher de changer la compagnie"""
+        validated_data.pop('bus_company', None)
+        return super().update(instance, validated_data)
+
+
+class TripTemplateListSerializer(serializers.ModelSerializer):
+    """
+    Serializer minimal pour les listes de modèles (dropdowns, tableaux)
+    """
+    
+    departure_city = serializers.CharField(
+        source='departure_station.city.name',
+        read_only=True
+    )
+    arrival_city = serializers.CharField(
+        source='arrival_station.city.name',
+        read_only=True
+    )
+    route_display = serializers.CharField(read_only=True)
+    operates_on_display = serializers.CharField(read_only=True)
+    
+    class Meta:
+        model = TripTemplate
+        fields = [
+            'id',
+            'departure_city',
+            'arrival_city',
+            'route_display',
+            'departure_time',
+            'operates_on_display',
+            'bus_type',
+            'price',
+            'is_active'
+        ]
+
+
+class TripTemplateSummarySerializer(serializers.ModelSerializer):
+    """
+    Serializer résumé pour affichage rapide (dashboard, statistiques)
+    """
+    
+    route_display = serializers.CharField(read_only=True)
+    operates_on_display = serializers.CharField(read_only=True)
+    generated_trips_count = serializers.SerializerMethodField()
+    next_departure = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TripTemplate
+        fields = [
+            'id',
+            'route_display',
+            'departure_time',
+            'operates_on_display',
+            'bus_type',
+            'price',
+            'total_seats',
+            'is_active',
+            'generated_trips_count',
+            'next_departure'
+        ]
+    
+    def get_generated_trips_count(self, obj):
+        """Nombre de trajets générés depuis ce modèle"""
+        return obj.generated_trips.filter(
+            status='scheduled',
+            departure_date__gte=timezone.now().date()
+        ).count()
+    
+    def get_next_departure(self, obj):
+        """Prochain départ généré depuis ce modèle"""
+        next_trip = obj.generated_trips.filter(
+            status='scheduled',
+            departure_date__gte=timezone.now().date()
+        ).order_by('departure_date', 'departure_time').first()
+        
+        if next_trip:
+            return {
+                'date': next_trip.departure_date,
+                'time': next_trip.departure_time,
+                'available_seats': next_trip.available_seats
+            }
+        return None
+
+
+# ===== UPDATE EXISTING TripSerializer TO SHOW TEMPLATE INFO =====
+
+# Add this to your existing TripSerializer fields list:
+# Inside TripSerializer Meta.fields, add:
+#   'template',
+#   'is_template_generated',
+#   'departure_station',
+#   'arrival_station',
+
+# And add this as a read-only property:
+class TripSerializer(serializers.ModelSerializer):
+    # ... your existing fields ...
+    
+    template_info = serializers.SerializerMethodField()
+    
+    def get_template_info(self, obj):
+        """Info sur le modèle si généré automatiquement"""
+        if obj.template and obj.is_template_generated:
+            return {
+                'id': obj.template.id,
+                'route': obj.template.route_display,
+                'bus_type': obj.template.get_bus_type_display()
+            }
+        return None
 
 class CitySerializer(serializers.ModelSerializer):
     """Basic city info for nested serialization"""

@@ -2,6 +2,8 @@
 
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
+from apps.accounts.models import BusCompany
 
 
 class City(models.Model):
@@ -89,3 +91,128 @@ class City(models.Model):
         if self.latitude and self.longitude:
             return (float(self.latitude), float(self.longitude))
         return None
+
+
+class BusStation(models.Model):
+    """
+    Bus stations/terminals where buses depart from and arrive at.
+    A company can have multiple stations in the same city.
+    
+    Example:
+    - Gare d'Adjamé (Abidjan) - Company A
+    - Gare de Yopougon (Abidjan) - Company A
+    - Gare Routière (San Pedro) - Company A
+    """
+    
+    company = models.ForeignKey(
+        BusCompany,
+        on_delete=models.CASCADE,
+        related_name='bus_stations',
+        help_text="Company that owns/operates this station"
+    )
+    
+    city = models.ForeignKey(
+        City,
+        on_delete=models.PROTECT,
+        related_name='bus_stations',
+        help_text="City where this station is located"
+    )
+    
+    name = models.CharField(
+        max_length=200,
+        help_text="Station name (e.g., 'Gare d'Adjamé')"
+    )
+    
+    address = models.TextField(
+        help_text="Full address of the station"
+    )
+    
+    phone_number = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Contact phone number for this station"
+    )
+    
+    # Optional: GPS coordinates for future map features
+    latitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=8,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(-90.0),
+            MaxValueValidator(90.0)
+        ],
+        help_text="GPS latitude"
+    )
+    
+    longitude = models.DecimalField(
+        max_digits=11,
+        decimal_places=8,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(-180.0),
+            MaxValueValidator(180.0)
+        ],
+        help_text="GPS longitude"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Whether this station is currently operational"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['city__name', 'name']
+        verbose_name = "Bus Station"
+        verbose_name_plural = "Bus Stations"
+        # Ensure unique station names per company per city
+        unique_together = [['company', 'city', 'name']]
+        indexes = [
+            models.Index(fields=['company', 'city']),
+            models.Index(fields=['is_active']),
+            models.Index(fields=['city', 'is_active']),
+        ]
+    
+    def __str__(self):
+        
+        return f"{self.name} - {self.city.name} ({self.company.name})"
+    
+    @property
+    def display_name(self):
+        """Full display name with city"""
+        return f"{self.name}, {self.city.name}"
+    
+    @property
+    def full_address(self):
+        """Complete address with city and state"""
+        return f"{self.address}, {self.city.display_name}"
+    
+    def get_coordinates(self):
+        """Get latitude and longitude as tuple"""
+        if self.latitude and self.longitude:
+            return (float(self.latitude), float(self.longitude))
+        return None
+    
+    def clean(self):
+        """Validation before saving"""
+        # Ensure station city exists
+        if not self.city_id:
+            raise ValidationError("Station must be associated with a city")
+        
+        # Ensure company owns this station
+        if not self.company_id:
+            raise ValidationError("Station must be associated with a company")
+        
+        # Ensure city is active
+        if self.city and not self.city.is_active:
+            raise ValidationError(f"Cannot create station in inactive city: {self.city.name}")
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
