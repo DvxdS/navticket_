@@ -26,6 +26,7 @@ from shared.permissions import (
 )
 
 from apps.transport.models import TripTemplate
+from apps.transport.services.trip_generator import TripGeneratorService
 # ===================== ROUTE VIEWS =====================
 
 class RouteListCreateView(generics.ListCreateAPIView):
@@ -228,6 +229,7 @@ class TripSearchView(generics.ListAPIView):
     Public endpoint for travelers to search available trips
     No authentication required for search
     """
+    permission_classes = []  # Explicitly allow public access
     serializer_class = TripListSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['bus_type', 'departure_date']
@@ -246,7 +248,7 @@ class TripSearchView(generics.ListAPIView):
             'route__bus_company'
         )
         
-        # Search by origin and destination
+        # Search by origin and destination cities
         origin_city_id = self.request.query_params.get('origin_city')
         destination_city_id = self.request.query_params.get('destination_city')
         
@@ -256,12 +258,40 @@ class TripSearchView(generics.ListAPIView):
         if destination_city_id:
             queryset = queryset.filter(route__destination_city_id=destination_city_id)
         
+        # Search by origin and destination stations
+        origin_station_id = self.request.query_params.get('origin_station')
+        destination_station_id = self.request.query_params.get('destination_station')
+        
+        if origin_station_id:
+            queryset = queryset.filter(departure_station_id=origin_station_id)
+        
+        if destination_station_id:
+            queryset = queryset.filter(arrival_station_id=destination_station_id)
+        
         # Filter by departure date
         departure_date = self.request.query_params.get('departure_date')
         if departure_date:
             try:
                 date_obj = datetime.strptime(departure_date, '%Y-%m-%d').date()
                 queryset = queryset.filter(departure_date=date_obj)
+            except ValueError:
+                pass
+        
+        # Filter by date range
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        
+        if date_from:
+            try:
+                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+                queryset = queryset.filter(departure_date__gte=date_from_obj)
+            except ValueError:
+                pass
+        
+        if date_to:
+            try:
+                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+                queryset = queryset.filter(departure_date__lte=date_to_obj)
             except ValueError:
                 pass
         
@@ -281,7 +311,88 @@ class TripSearchView(generics.ListAPIView):
             except ValueError:
                 pass
         
+        # Bus type filtering
+        bus_type = self.request.query_params.get('bus_type')
+        if bus_type:
+            queryset = queryset.filter(bus_type=bus_type)
+        
+        # Company filtering (optional)
+        company_id = self.request.query_params.get('company')
+        if company_id:
+            queryset = queryset.filter(route__bus_company_id=company_id)
+        
         return queryset
+
+
+# ===================== PUBLIC DATA ENDPOINTS =====================
+
+@api_view(['GET'])
+def public_cities(request):
+    """
+    Public endpoint to get all active cities
+    No authentication required
+    """
+    from apps.locations.models import City
+    
+    cities = City.objects.filter(is_active=True).order_by('name')
+    
+    return Response([
+        {
+            'id': city.id,
+            'name': city.name,
+            'state_province': city.state_province,
+            'display_name': city.display_name
+        }
+        for city in cities
+    ])
+
+
+@api_view(['GET'])
+def public_stations(request):
+    """
+    Public endpoint to get all active bus stations
+    No authentication required
+    """
+    from apps.locations.models import BusStation
+    
+    stations = BusStation.objects.filter(is_active=True).select_related('city', 'company').order_by('city__name', 'name')
+    
+    return Response([
+        {
+            'id': station.id,
+            'name': station.name,
+            'city_id': station.city.id,
+            'city_name': station.city.name,
+            'company_id': station.company.id,
+            'company_name': station.company.name,
+            'address': station.address,
+            'phone_number': station.phone_number
+        }
+        for station in stations
+    ])
+
+
+@api_view(['GET'])
+def public_companies(request):
+    """
+    Public endpoint to get all active bus companies
+    No authentication required
+    """
+    from apps.accounts.models import BusCompany
+    
+    companies = BusCompany.objects.filter(is_active=True).order_by('name')
+    
+    return Response([
+        {
+            'id': company.id,
+            'name': company.name,
+            'business_name': company.business_name,
+            'phone_number': company.phone_number,
+            'email': company.email,
+            'verification_status': company.verification_status
+        }
+        for company in companies
+    ])
 
 
 # ===================== COMPANY STATISTICS VIEWS =====================
@@ -384,27 +495,10 @@ def trip_calendar(request):
         'total_trips': trips.count()
     })
 class TripTemplateViewSet(viewsets.ModelViewSet):
-    """
-    CRUD endpoints pour les modèles de trajets récurrents
-    Les compagnies peuvent créer des horaires qui génèrent automatiquement des trajets
-    
-    Endpoints:
-    - GET /api/v1/transport/templates/ - Liste des modèles de la compagnie
-    - POST /api/v1/transport/templates/ - Créer un nouveau modèle
-    - GET /api/v1/transport/templates/{id}/ - Détails d'un modèle
-    - PUT /api/v1/transport/templates/{id}/ - Mettre à jour un modèle
-    - PATCH /api/v1/transport/templates/{id}/ - Mise à jour partielle
-    - DELETE /api/v1/transport/templates/{id}/ - Supprimer un modèle
-    - POST /api/v1/transport/templates/{id}/generate/ - Générer des trajets manuellement
-    - GET /api/v1/transport/templates/{id}/preview/ - Prévisualiser les trajets à générer
-    - POST /api/v1/transport/templates/{id}/activate/ - Activer le modèle
-    - POST /api/v1/transport/templates/{id}/deactivate/ - Désactiver le modèle
-    - GET /api/v1/transport/templates/summary/ - Résumé des modèles (dashboard)
-    """
     
     serializer_class = TripTemplateSerializer
     permission_classes = [IsAuthenticated, IsCompanyUser]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         'is_active',
         'bus_type',
@@ -427,10 +521,7 @@ class TripTemplateViewSet(viewsets.ModelViewSet):
     ordering = ['departure_station__city__name', 'departure_time']
     
     def get_queryset(self):
-        """
-        Les compagnies voient uniquement leurs propres modèles
-        Optimisé avec select_related et prefetch_related
-        """
+        """Les compagnies voient uniquement leurs propres modèles"""
         user = self.request.user
         
         if hasattr(user, 'company') and user.company:
@@ -458,11 +549,17 @@ class TripTemplateViewSet(viewsets.ModelViewSet):
             return TripTemplateSummarySerializer
         return TripTemplateSerializer
     
+    def get_serializer_context(self):
+        """
+        Ensure request context is always passed to serializers
+        This is critical for dynamic queryset filtering in serializers
+        """
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+    
     def perform_destroy(self, instance):
-        """
-        Suppression douce - désactive le modèle au lieu de le supprimer
-        Les trajets déjà générés restent intacts
-        """
+        """Suppression douce - désactive le modèle au lieu de le supprimer"""
         instance.is_active = False
         instance.save()
     
@@ -473,7 +570,7 @@ class TripTemplateViewSet(viewsets.ModelViewSet):
         
         POST /api/v1/transport/templates/{id}/generate/
         Body: {
-            "days_ahead": 30  // Optionnel, par défaut 30 jours
+            "days_ahead": 30
         }
         """
         template = self.get_object()
@@ -499,18 +596,24 @@ class TripTemplateViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # TODO: Appeler le service de génération de trajets
-        # from apps.transport.services.trip_generator import TripGeneratorService
-        # generated_count = TripGeneratorService.generate_trips_for_template(template, days_ahead)
-        
-        # Pour l'instant, retourner un message
-        return Response({
-            "message": f"Génération de trajets pour les {days_ahead} prochains jours",
-            "template_id": template.id,
-            "template": template.route_display,
-            "status": "En attente du service de génération"
-            # "trips_generated": generated_count  // À ajouter après implémentation
-        })
+        # Générer les trajets
+        try:
+            result = TripGeneratorService.generate_trips_for_template(
+                template=template,
+                days_ahead=days_ahead,
+                skip_existing=True
+            )
+            
+            if result['success']:
+                return Response(result, status=status.HTTP_201_CREATED)
+            else:
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': f'Erreur lors de la génération: {str(e)}',
+                'trips_generated': 0
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=True, methods=['get'])
     def preview(self, request, pk=None):

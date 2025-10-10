@@ -63,6 +63,19 @@ urlpatterns = [
          views.TripSearchView.as_view(), 
          name='trip-search'),
     
+    # Public data endpoints (no authentication required)
+    path('public/cities/', 
+         views.public_cities, 
+         name='public-cities'),
+    
+    path('public/stations/', 
+         views.public_stations, 
+         name='public-stations'),
+    
+    path('public/companies/', 
+         views.public_companies, 
+         name='public-companies'),
+    
     # ===================== COMPANY STATISTICS ENDPOINTS =====================
     
     # Company dashboard statistics
