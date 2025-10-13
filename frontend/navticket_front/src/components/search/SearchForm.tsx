@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { MapPin, Calendar, ArrowRight, Repeat2, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useInRouterContext } from 'react-router-dom';
+import { MapPin, Calendar, ArrowRight, Repeat2, Users, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -10,14 +11,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { IVORIAN_CITIES } from '@/utils/constants.ts';
+import { fetchCities } from '@/services/api';
+import type { City } from '@/services/api'
 
 export default function SearchForm() {
+  const navigate = useNavigate();
+  const inRouter = useInRouterContext();
+  
+  // Form states
   const [departure, setDeparture] = useState<string>('');
   const [destination, setDestination] = useState<string>('');
   const [date, setDate] = useState<string>('');
   const [passengers, setPassengers] = useState<string>('1');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // API states
+  const [cities, setCities] = useState<City[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+
+  // Fetch cities from backend on component mount
+  useEffect(() => {
+    const loadCities = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchCities();
+        setCities(data);
+        setError('');
+      } catch (err) {
+        console.error('Failed to fetch cities:', err);
+        setError('Impossible de charger les villes. Veuillez réessayer.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCities();
+  }, []);
 
   // Get today's date for min date validation
   const today = new Date().toISOString().split('T')[0];
@@ -42,9 +72,6 @@ export default function SearchForm() {
     if (departure && destination && departure === destination) {
       newErrors.destination = 'La destination doit être différente du départ';
     }
-    if (!date) {
-      newErrors.date = 'Veuillez sélectionner une date';
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -55,10 +82,57 @@ export default function SearchForm() {
     e.preventDefault();
     
     if (validateForm()) {
-      console.log('Recherche:', { departure, destination, date, passengers });
-      // TODO: Navigate to search results or call API
+      // Find city IDs from city names
+      const departureCity = cities.find(city => city.name === departure);
+      const destinationCity = cities.find(city => city.name === destination);
+  
+      if (departureCity && destinationCity) {
+        // Navigate to search results with query params
+        const searchParams = new URLSearchParams({
+          origin_city: departureCity.id.toString(),
+          destination_city: destinationCity.id.toString(),
+          departure_date: date,
+          passengers: passengers,
+        });
+  
+        const target = `/search?${searchParams.toString()}`;
+        if (inRouter) {
+          navigate(target);
+        } else {
+          window.location.href = target;
+        }
+      }
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <Card className="w-full max-w-5xl bg-white p-6 shadow-2xl">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-[#73C8D2]" />
+          <span className="ml-3 text-gray-600">Chargement des villes...</span>
+        </div>
+      </Card>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Card className="w-full max-w-5xl bg-white p-6 shadow-2xl">
+        <div className="py-12 text-center">
+          <p className="text-red-500">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-[#73C8D2] hover:bg-[#73C8D2]/90"
+          >
+            Réessayer
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-5xl bg-white p-6 shadow-2xl">
@@ -75,12 +149,12 @@ export default function SearchForm() {
                 <SelectValue placeholder="Choisir une ville" />
               </SelectTrigger>
               <SelectContent>
-                {IVORIAN_CITIES.map((city) => (
+                {cities.map((city) => (
                   <SelectItem key={city.id} value={city.name}>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-[#73C8D2]" />
                       <span>{city.name}</span>
-                      <span className="text-xs text-gray-500">({city.region})</span>
+                      <span className="text-xs text-gray-500">({city.state_province})</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -112,12 +186,12 @@ export default function SearchForm() {
                 <SelectValue placeholder="Choisir une ville" />
               </SelectTrigger>
               <SelectContent>
-                {IVORIAN_CITIES.map((city) => (
+                {cities.map((city) => (
                   <SelectItem key={city.id} value={city.name}>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-[#73C8D2]" />
                       <span>{city.name}</span>
-                      <span className="text-xs text-gray-500">({city.region})</span>
+                      <span className="text-xs text-gray-500">({city.state_province})</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -193,7 +267,7 @@ export default function SearchForm() {
                 <SelectValue placeholder="Choisir une ville" />
               </SelectTrigger>
               <SelectContent>
-                {IVORIAN_CITIES.map((city) => (
+                {cities.map((city) => (
                   <SelectItem key={city.id} value={city.name}>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-[#73C8D2]" />
@@ -231,7 +305,7 @@ export default function SearchForm() {
                 <SelectValue placeholder="Choisir une ville" />
               </SelectTrigger>
               <SelectContent>
-                {IVORIAN_CITIES.map((city) => (
+                {cities.map((city) => (
                   <SelectItem key={city.id} value={city.name}>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-[#73C8D2]" />
