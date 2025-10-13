@@ -243,9 +243,14 @@ class TripSearchView(generics.ListAPIView):
             available_seats__gt=0,
             departure_date__gte=timezone.now().date()
         ).select_related(
+            'route',
             'route__origin_city',
             'route__destination_city',
-            'route__bus_company'
+            'route__bus_company',
+            'departure_station',        # ✅ Add this
+            'arrival_station',          # ✅ Add this
+            'departure_station__city',  # ✅ Add this (for station city info)
+            'arrival_station__city',    # ✅ Add this (for station city info)
         )
         
         # Search by origin and destination cities

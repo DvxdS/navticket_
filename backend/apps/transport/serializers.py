@@ -191,6 +191,8 @@ class TripTemplateListSerializer(serializers.ModelSerializer):
     )
     route_display = serializers.CharField(read_only=True)
     operates_on_display = serializers.CharField(read_only=True)
+    departure_station = serializers.SerializerMethodField()
+    arrival_station = serializers.SerializerMethodField()
     
     class Meta:
         model = TripTemplate
@@ -204,7 +206,30 @@ class TripTemplateListSerializer(serializers.ModelSerializer):
             'bus_type',
             'price',
             'is_active'
+            'departure_station'
+            'arrival_station'
         ]
+
+
+        def get_departure_station(self, obj):
+            """Return departure station info if exists"""
+            if obj.departure_station:
+                return {
+                    'id': obj.departure_station.id,
+                    'name': obj.departure_station.name,
+                    'address': obj.departure_station.address,
+                }
+            return None
+        
+        def get_arrival_station(self, obj):
+            """Return arrival station info if exists"""
+            if obj.arrival_station:
+                return {
+                    'id': obj.arrival_station.id,
+                    'name': obj.arrival_station.name,
+                    'address': obj.arrival_station.address,
+                }
+            return None
 
 
 class TripTemplateSummarySerializer(serializers.ModelSerializer):
@@ -380,6 +405,10 @@ class TripListSerializer(serializers.ModelSerializer):
     can_be_booked = serializers.ReadOnlyField()
     company_name = serializers.CharField(source='route.bus_company.name', read_only=True)
     
+    # ✅ Add station serializers
+    departure_station = serializers.SerializerMethodField()
+    arrival_station = serializers.SerializerMethodField()
+    
     class Meta:
         model = Trip
         fields = [
@@ -387,8 +416,29 @@ class TripListSerializer(serializers.ModelSerializer):
             'arrival_time', 'departure_datetime', 'arrival_datetime',
             'total_seats', 'available_seats', 'occupancy_rate', 'is_full',
             'price', 'bus_number', 'bus_type', 'status', 'can_be_booked',
+            'departure_station', 'arrival_station',  # ✅ Added these two
             'created_at'
         ]
+    
+    def get_departure_station(self, obj):
+        """Return departure station info if exists"""
+        if obj.departure_station:
+            return {
+                'id': obj.departure_station.id,
+                'name': obj.departure_station.name,
+                'address': obj.departure_station.address,
+            }
+        return None
+    
+    def get_arrival_station(self, obj):
+        """Return arrival station info if exists"""
+        if obj.arrival_station:
+            return {
+                'id': obj.arrival_station.id,
+                'name': obj.arrival_station.name,
+                'address': obj.arrival_station.address,
+            }
+        return None
 
 
 class TripCreateSerializer(serializers.ModelSerializer):

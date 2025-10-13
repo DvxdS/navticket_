@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BASE_URL || 'http://127.0.0.1:8000',
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -86,6 +86,16 @@ export interface Trip {
   status: string;
   can_be_booked: boolean;
   created_at: string;
+  departure_station?: {
+    id: number;
+    name: string;
+    address: string;
+  } | null;
+  arrival_station?: {
+    id: number;
+    name: string;
+    address: string;
+  } | null;
 }
 
 export interface SearchTripsParams {
