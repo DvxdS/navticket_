@@ -6,6 +6,7 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 from apps.bookings.services.emails_service import EmailService
 from apps.bookings.services.qr_service import QRCodeService
+from django.db import transaction
 import uuid
 
 
@@ -91,6 +92,11 @@ class Booking(models.Model):
         default=1,
         validators=[MinValueValidator(1)],
         help_text="Number of passengers in this booking"
+    )
+    selected_seats = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of selected seat numbers ['1A', '1B', '2C']"
     )
     
     # Status tracking
@@ -193,9 +199,154 @@ class Booking(models.Model):
         hours_until_departure = (trip_datetime - now).total_seconds() / 3600
         
         return hours_until_departure > 2  # Must cancel at least 2 hours before
+    def assign_seats(self, seat_numbers):
+        """Assign specific seats to this booking"""
+        
+        # Import here to avoid circular import
+        from apps.bookings.models import Seat
+        
+        # Validate seat count matches passengers
+        if len(seat_numbers) != self.total_passengers:
+            raise ValueError(
+                f"Seat count ({len(seat_numbers)}) must match passenger count ({self.total_passengers})"
+            )
+        
+        with transaction.atomic():
+            # Get seats and lock them
+            seats = Seat.objects.select_for_update().filter(
+                trip=self.trip,
+                seat_number__in=seat_numbers
+            )
+            
+            # Check all seats exist
+            if seats.count() != len(seat_numbers):
+                missing = set(seat_numbers) - set(seats.values_list('seat_number', flat=True))
+                raise ValueError(f"Seats do not exist: {missing}")
+            
+            # Check all seats are available
+            unavailable = seats.filter(is_available=False)
+            if unavailable.exists():
+                unavailable_numbers = list(unavailable.values_list('seat_number', flat=True))
+                raise ValueError(f"Seats already taken: {unavailable_numbers}")
+            
+            # Assign seats to this booking
+            seats.update(
+                booking=self,
+                is_available=False,
+                reserved_until=None,
+                passenger_name=None  # Will be updated when passengers are added
+            )
+            
+            # Save seat numbers to booking
+            self.selected_seats = seat_numbers
+            self.save(update_fields=['selected_seats'])
+            
+            return seats
+    
+    def release_seats(self):
+        """Release all seats assigned to this booking"""
+        
+        # Import here to avoid circular import
+        from apps.bookings.models import Seat
+        
+        seats = Seat.objects.filter(booking=self)
+        seats.update(
+            booking=None,
+            is_available=True,
+            reserved_until=None,
+            passenger_name=None
+        )
+        
+        self.selected_seats = []
+        self.save(update_fields=['selected_seats'])
+    
+    def cancel(self):
+        """Cancel booking and release seats"""
+        if self.booking_status == 'cancelled':
+            return False
+        
+        self.booking_status = 'cancelled'
+        self.cancelled_at = timezone.now()
+        
+        # Release seats when cancelling
+        self.release_seats()
+        
+        # Release seats back to trip
+        self.trip.available_seats += self.total_passengers
+        self.trip.save()
+        
+        self.save(update_fields=['booking_status', 'cancelled_at'])
+        
+        return True
 
 
-
+class Seat(models.Model):
+    """Individual seat for a specific trip"""
+    
+    trip = models.ForeignKey(
+        'transport.Trip',
+        on_delete=models.CASCADE,
+        related_name='seats'
+    )
+    
+    seat_number = models.CharField(
+        max_length=5,
+        help_text="Ex: 1A, 1B, 2C, 2D"
+    )
+    
+    row = models.IntegerField(
+        help_text="Numéro de rangée (commence à 1)"
+    )
+    
+    position = models.CharField(
+        max_length=20,
+        choices=[
+            # For Standard 3x2 layout
+            ('left_window', 'Fenêtre gauche'),
+            ('left_middle', 'Milieu gauche'),
+            ('left_aisle', 'Couloir gauche'),
+            ('right_aisle', 'Couloir droit'),
+            ('right_window', 'Fenêtre droite'),
+        ]
+    )
+    
+    is_available = models.BooleanField(
+        default=True,
+        help_text="Siège disponible pour réservation"
+    )
+    
+    booking = models.ForeignKey(
+        Booking,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='booked_seats'
+    )
+    
+    passenger_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+    
+    reserved_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Expiration de la réservation temporaire"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['trip', 'seat_number']
+        ordering = ['row', 'position']
+        indexes = [
+            models.Index(fields=['trip', 'is_available']),
+        ]
+    
+    def __str__(self):
+        return f"Siège {self.seat_number} - Voyage {self.trip.id}"
     
 
 

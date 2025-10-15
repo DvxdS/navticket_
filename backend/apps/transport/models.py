@@ -201,6 +201,16 @@ class Trip(models.Model):
         related_name='arriving_trips',
         help_text="Gare d'arrivée"
     )
+
+    seat_layout = models.CharField(
+        max_length=10,
+        choices=[
+            ('3x2', 'Standard (3+2)'),     # 5 seats per row
+            ('2x2', 'VIP/Luxury (2+2)'),   # 4 seats per row
+        ],
+        default='3x2',
+        help_text="Configuration des sièges du bus"
+    )
     
     # Metadata
     is_template_generated = models.BooleanField(
@@ -299,6 +309,25 @@ class Trip(models.Model):
             self.available_seats > 0 and
             trip_datetime > now
         )
+      # Add these properties
+    @property
+    def seats_per_row(self):
+        """Get number of seats per row based on layout"""
+        layouts = {
+            '3x2': 5,  # Standard: 3 + 2
+            '2x2': 4,  # VIP/Luxury: 2 + 2
+        }
+        return layouts.get(self.seat_layout, 5)
+    
+    @property
+    def total_rows(self):
+        """Calculate total rows based on total seats"""
+        seats_count = self.seats_per_row
+        rows = self.total_seats // seats_count
+        # Add extra row if there are remaining seats
+        if self.total_seats % seats_count:
+            rows += 1
+        return rows
 
 class TripTemplate(models.Model):
     """

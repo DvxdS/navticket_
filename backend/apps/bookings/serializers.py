@@ -3,7 +3,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from datetime import datetime
-from .models import Booking, Passenger
+from .models import Booking, Passenger, Seat
 from apps.transport.models import Trip
 from apps.bookings.services.booking_services import (
     validate_trip_bookable,
@@ -242,3 +242,114 @@ class BookingCancelSerializer(serializers.Serializer):
         allow_blank=True,
         help_text="Optional cancellation reason"
     )
+
+class SeatSerializer(serializers.ModelSerializer):
+    """Serializer for individual seat information"""
+    
+    class Meta:
+        model = Seat
+        fields = [
+            'id',
+            'seat_number',
+            'row',
+            'position',
+            'is_available',
+            'passenger_name',
+            'reserved_until'
+        ]
+        read_only_fields = ['id', 'reserved_until']
+
+
+class SeatMapSerializer(serializers.Serializer):
+    """Serializer for complete seat map with trip context"""
+    
+    trip_id = serializers.IntegerField()
+    seat_layout = serializers.CharField()
+    total_seats = serializers.IntegerField()
+    available_seats = serializers.IntegerField()
+    booked_seats = serializers.IntegerField()
+    reserved_seats = serializers.IntegerField()
+    occupancy_rate = serializers.FloatField()
+    seats = SeatSerializer(many=True, read_only=True)
+
+
+class SeatReservationSerializer(serializers.Serializer):
+    """Serializer for seat reservation requests"""
+    
+    trip_id = serializers.IntegerField()
+    seat_numbers = serializers.ListField(
+        child=serializers.CharField(max_length=5),
+        min_length=1,
+        max_length=10,
+        help_text="List of seat numbers to reserve (e.g., ['1A', '1B'])"
+    )
+    
+    def validate_seat_numbers(self, value):
+        """Ensure seat numbers are unique"""
+        if len(value) != len(set(value)):
+            raise serializers.ValidationError("Duplicate seat numbers not allowed")
+        return value
+    
+    def validate(self, data):
+        """Validate trip exists and seats are valid"""
+        from apps.transport.models import Trip
+        
+        trip_id = data.get('trip_id')
+        seat_numbers = data.get('seat_numbers')
+        
+        # Check trip exists
+        try:
+            trip = Trip.objects.get(id=trip_id)
+        except Trip.DoesNotExist:
+            raise serializers.ValidationError({"trip_id": "Trip not found"})
+        
+        # Check seats exist for this trip
+        existing_seats = Seat.objects.filter(
+            trip=trip,
+            seat_number__in=seat_numbers
+        ).values_list('seat_number', flat=True)
+        
+        missing_seats = set(seat_numbers) - set(existing_seats)
+        if missing_seats:
+            raise serializers.ValidationError({
+                "seat_numbers": f"Invalid seats: {list(missing_seats)}"
+            })
+        
+        data['trip'] = trip
+        return data
+
+
+class SeatReleaseSerializer(serializers.Serializer):
+    """Serializer for releasing reserved seats"""
+    
+    trip_id = serializers.IntegerField()
+    seat_numbers = serializers.ListField(
+        child=serializers.CharField(max_length=5),
+        min_length=1,
+        help_text="List of seat numbers to release"
+    )
+
+
+class BookingWithSeatsSerializer(serializers.ModelSerializer):
+    """Extended booking serializer with seat information"""
+    
+    booked_seats = SeatSerializer(many=True, read_only=True)
+    passenger_count = serializers.IntegerField(source='total_passengers', read_only=True)
+    
+    class Meta:
+        model = Booking
+        fields = [
+            'id',
+            'booking_reference',
+            'trip',
+            'total_passengers',
+            'passenger_count',
+            'selected_seats',
+            'booked_seats',
+            'ticket_price',
+            'total_amount',
+            'booking_status',
+            'payment_status',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'booking_reference', 'booked_seats', 'created_at']
