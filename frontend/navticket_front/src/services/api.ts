@@ -1,22 +1,23 @@
 import axios from 'axios';
-
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BASE_URL || 'http://127.0.0.1:8000',
+  baseURL: BASE_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor (for adding auth tokens later)
+// Request interceptor - Add auth token to all requests
 api.interceptors.request.use(
   (config) => {
-    // Add auth token if exists
-    const token = localStorage.getItem('token');
-    if (token) {
+    const token = localStorage.getItem('access_token');
+    
+    if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
     return config;
   },
   (error) => {
@@ -24,20 +25,49 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor (for error handling)
+// Response interceptor - Handle token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response) {
-      // Server responded with error
-      console.error('API Error:', error.response.data);
-    } else if (error.request) {
-      // No response received
-      console.error('Network Error:', error.message);
-    } else {
-      // Other errors
-      console.error('Error:', error.message);
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If error is 401 and we haven't retried yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+
+        // Try to refresh the token
+        const response = await axios.post(`${BASE_URL}/accounts/auth/refresh/`, {
+          refresh: refreshToken,
+        });
+
+        const { access } = response.data;
+
+        // Save new token
+        localStorage.setItem('access_token', access);
+
+        // Retry original request with new token
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed - clear auth and redirect to login
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        
+        // Dispatch custom event for auth context to handle
+        window.dispatchEvent(new Event('auth:logout'));
+        
+        return Promise.reject(refreshError);
+      }
     }
+
     return Promise.reject(error);
   }
 );
@@ -114,7 +144,7 @@ export interface SearchTripsParams {
  */
 export const fetchCities = async (): Promise<City[]> => {
   try {
-    const response = await api.get('/api/v1/locations/cities/');
+    const response = await api.get('/locations/cities/');
     return response.data;
   } catch (error) {
     console.error('Error fetching cities:', error);
@@ -127,7 +157,7 @@ export const fetchCities = async (): Promise<City[]> => {
  */
 export const searchTrips = async (params: SearchTripsParams): Promise<Trip[]> => {
   try {
-    const response = await api.get('/api/v1/transport/search/trips/', {
+    const response = await api.get('transport/search/trips/', {
       params,
     });
     return response.data;
@@ -142,7 +172,7 @@ export const searchTrips = async (params: SearchTripsParams): Promise<Trip[]> =>
  */
 export const getTripDetails = async (tripId: number): Promise<Trip> => {
   try {
-    const response = await api.get(`/api/v1/transport/trips/${tripId}/`);
+    const response = await api.get(`/transport/trips/${tripId}/`);
     return response.data;
   } catch (error) {
     console.error('Error fetching trip details:', error);
@@ -155,7 +185,7 @@ export const getTripDetails = async (tripId: number): Promise<Trip> => {
  */
 export const getPopularRoutes = async (): Promise<Route[]> => {
   try {
-    const response = await api.get('/api/v1/transport/routes/popular/');
+    const response = await api.get('/transport/routes/popular/');
     return response.data;
   } catch (error) {
     console.error('Error fetching popular routes:', error);

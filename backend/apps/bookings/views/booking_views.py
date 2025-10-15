@@ -3,9 +3,9 @@
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
-
+from django.utils import timezone
 from ..models import Booking, Seat
 from ..serializers import (
     BookingCreateSerializer,
@@ -23,6 +23,10 @@ from ..utils import (
     get_seat_availability_summary
 )
 from ..services.booking_services import cancel_booking
+from apps.transport.models import Trip
+from datetime import timedelta
+
+
 
 
 class BookingCreateView(generics.CreateAPIView):
