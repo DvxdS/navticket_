@@ -1,4 +1,5 @@
 import { Clock, MapPin, Users, ArrowRight, Bus, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,9 +11,9 @@ interface TripCardProps {
 }
 
 function TripCard({ trip, onBook }: TripCardProps) {
+  const navigate = useNavigate();
     
-    
-    const formatTime = (time: string) => time.slice(0, 5);
+  const formatTime = (time: string) => time.slice(0, 5);
   
   const formatPrice = (price: string) => {
     return new Intl.NumberFormat('fr-FR').format(parseFloat(price));
@@ -49,6 +50,17 @@ function TripCard({ trip, onBook }: TripCardProps) {
       case 'vip': return 'VIP';
       case 'luxury': return 'Luxe';
       default: return 'Standard';
+    }
+  };
+
+  // Handle reserve button click
+  const handleReserveClick = () => {
+    if (onBook) {
+      // If parent provides custom handler, use it
+      onBook();
+    } else {
+      // Otherwise, navigate to trip details page
+      navigate(`/trip/${trip.id}`);
     }
   };
 
@@ -152,7 +164,7 @@ function TripCard({ trip, onBook }: TripCardProps) {
           </div>
 
           <Button
-            onClick={onBook}
+            onClick={handleReserveClick}
             disabled={!trip.can_be_booked}
             size="lg"
             className={`${trip.can_be_booked ? 'bg-[#FF9013] hover:bg-[#FF9013]/90 hover:shadow-lg' : 'bg-gray-300 cursor-not-allowed'} px-8 font-semibold text-white transition-all duration-300`}

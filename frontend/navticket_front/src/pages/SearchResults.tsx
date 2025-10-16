@@ -67,7 +67,7 @@ export default function SearchResults() {
   };
 
   const handleBook = (tripId: number) => {
-    navigate(`/booking/${tripId}?passengers=${passengers}`);
+    navigate(`/trip/${tripId}?passengers=${passengers}`);
   };
 
   if (loading) {

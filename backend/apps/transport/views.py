@@ -3,7 +3,7 @@
 from rest_framework import generics, status, filters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
@@ -140,22 +140,42 @@ class TripListCreateView(generics.ListCreateAPIView):
 
 class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    GET: Get trip details
-    PUT/PATCH: Update trip
-    DELETE: Cancel trip (set status to 'cancelled')
+    GET: Get trip details (public)
+    PUT/PATCH: Update trip (company only)
+    DELETE: Cancel trip (company only)
     """
-    permission_classes = [IsAuthenticated, IsTripOwner]
+    serializer_class = TripDetailSerializer
+    lookup_field = 'pk'
+    
+    def get_permissions(self):
+        """
+        Public can view (GET), only authenticated company can modify
+        """
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def get_queryset(self):
-        """Return trips for the authenticated company only"""
-        return Trip.objects.filter(
-            route__bus_company=self.request.user.company
-        ).select_related(
+        """
+        For GET: Return all trips (public)
+        For PUT/PATCH/DELETE: Return only company's trips
+        """
+        queryset = Trip.objects.select_related(
             'route__origin_city',
-            'route__destination_city', 
+            'route__destination_city',
             'route__bus_company',
             'created_by'
         )
+        
+        # If authenticated and trying to modify, filter by company
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            if self.request.user.is_authenticated and hasattr(self.request.user, 'company'):
+                return queryset.filter(route__bus_company=self.request.user.company)
+            # If not authenticated or no company, return empty queryset
+            return queryset.none()
+        
+        # For GET requests, return all trips (public)
+        return queryset
     
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
@@ -164,6 +184,13 @@ class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
     
     def perform_destroy(self, instance):
         """Soft delete - set status to cancelled"""
+        # Check if user owns this trip
+        if not (self.request.user.is_authenticated and 
+                hasattr(self.request.user, 'company') and 
+                instance.route.bus_company == self.request.user.company):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You don't have permission to cancel this trip")
+        
         instance.status = 'cancelled'
         instance.save()
 

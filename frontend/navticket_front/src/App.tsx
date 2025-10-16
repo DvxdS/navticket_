@@ -3,6 +3,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import Landing from '@/pages/Landing';
 import SearchResults from '@/pages/SearchResults';
+import { TripDetailsPage } from '@/pages/TripDetailsPage'; // Add this
 
 function App() {
   return (
@@ -10,9 +11,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/search" element={<SearchResults />} />
+        <Route path="/trip/:tripId" element={<TripDetailsPage />} /> {/* Add this */}
       </Routes>
 
-      {/* Toast Notifications */}
       <Toaster 
         position="top-right"
         toastOptions={{

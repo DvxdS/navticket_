@@ -14,7 +14,7 @@ class AuthService {
    * Login user
    */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    const response = await api.post<LoginResponse>('/accounts/auth/login/', credentials);
+    const response = await api.post<LoginResponse>('/auth/traveler/login/', credentials);
     
     // Store tokens and user data
     this.storeAuthData(response.data);
@@ -26,7 +26,7 @@ class AuthService {
    * Register new traveler
    */
   async signup(data: SignupData): Promise<SignupResponse> {
-    const response = await api.post<SignupResponse>('/accounts/travelers/register/', data);
+    const response = await api.post<SignupResponse>('/auth/traveler/register/', data);
     
     // Store tokens and user data
     this.storeAuthData(response.data);
@@ -38,7 +38,7 @@ class AuthService {
    * Refresh access token
    */
   async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
-    const response = await api.post<RefreshTokenResponse>('/accounts/auth/refresh/', {
+    const response = await api.post<RefreshTokenResponse>('/auth/refresh/', {
       refresh: refreshToken,
     });
     
