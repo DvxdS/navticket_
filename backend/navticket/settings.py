@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
+    'rest_framework_simplejwt.token_blacklist',  
     
     # Apps - referencing AppConfig classes
     'apps.accounts.apps.AccountsConfig',
@@ -61,7 +62,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # ✅ Must be first!
+    'corsheaders.middleware.CorsMiddleware',  
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

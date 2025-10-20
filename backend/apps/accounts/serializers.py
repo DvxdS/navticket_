@@ -2,6 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import validate_email
 from .models import User, BusCompany
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 import re
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -114,3 +116,43 @@ class CompanyLoginSerializer(serializers.Serializer):
             'email': email,
             'password': password
         }
+
+
+class LogoutSerializer(serializers.Serializer):
+    """Serializer for logout - to blacklist refresh token"""
+    refresh = serializers.CharField(required=True)
+    
+    def validate(self, attrs):
+        self.token = attrs['refresh']
+        return attrs
+    
+    def save(self, **kwargs):
+        try:
+            RefreshToken(self.token).blacklist()
+        except TokenError:
+            raise serializers.ValidationError('Token is invalid or expired')
+
+
+class CurrentUserSerializer(serializers.ModelSerializer):
+    """Detailed serializer for current authenticated user"""
+    company = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 
+                  'role', 'is_active', 'date_joined', 'company')
+        read_only_fields = fields
+    
+    def get_company(self, obj):
+        """Get company details if user is a company user"""
+        if obj.is_company_user and obj.company:
+            return {
+                'id': obj.company.id,
+                'name': obj.company.name,
+                'email': obj.company.email,
+                'phone': obj.company.phone,
+                'address': obj.company.address,
+                'verification_status': obj.company.verification_status,
+                'is_active': obj.company.is_active,
+            }
+        return None

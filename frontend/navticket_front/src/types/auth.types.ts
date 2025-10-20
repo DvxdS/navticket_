@@ -17,8 +17,8 @@ export interface User {
   }
   
   export interface LoginResponse {
-    access: string;
-    refresh: string;
+    access_token: string;
+    refresh_token: string;
     user: User;
   }
   
@@ -33,8 +33,8 @@ export interface User {
   }
   
   export interface SignupResponse {
-    access: string;
-    refresh: string;
+    access_token: string;
+    refresh_token: string;
     user: User;
     message: string;
   }

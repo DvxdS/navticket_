@@ -136,40 +136,40 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
       onClick={handleClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col animate-slideUp"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] h-[98vh] overflow-hidden flex flex-col animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 flex items-center justify-between flex-shrink-0">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-1">Réservation de ticket</h2>
-            <p className="text-blue-100 text-sm">
+        {/* Header - Compact */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 sm:p-5 flex items-center justify-between flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold mb-0.5 truncate">Réservation de ticket</h2>
+            <p className="text-blue-100 text-xs sm:text-sm truncate">
               {trip.route.origin} → {trip.route.destination}
             </p>
-            <p className="text-blue-200 text-xs mt-1">
-            {trip.company?.name} • {trip.departure_date} à {trip.departure_time}
+            <p className="text-blue-200 text-[10px] sm:text-xs mt-0.5 truncate">
+              {trip.company?.name} • {trip.departure_date} à {trip.departure_time}
             </p>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition"
+            className="p-2 hover:bg-white/20 rounded-lg transition flex-shrink-0 ml-2"
             aria-label="Close modal"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="bg-gray-50 px-6 py-4 border-b flex-shrink-0">
+        {/* Progress Indicator - Compact */}
+        <div className="bg-gray-50 px-4 sm:px-6 py-3 border-b flex-shrink-0">
           <div className="flex items-center justify-center max-w-md mx-auto">
             {/* Step 1 */}
             <div className="flex flex-col items-center">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition ${
                   bookingState.currentStep === 'seats'
                     ? 'bg-blue-600 text-white'
                     : 'bg-green-500 text-white'
@@ -178,7 +178,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 {bookingState.currentStep === 'payment' ? '✓' : '1'}
               </div>
               <span
-                className={`text-xs mt-2 font-medium ${
+                className={`text-[10px] sm:text-xs mt-1 sm:mt-2 font-medium ${
                   bookingState.currentStep === 'seats'
                     ? 'text-blue-600'
                     : 'text-green-600'
@@ -190,7 +190,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
             {/* Connector */}
             <div
-              className={`flex-1 h-1 mx-4 rounded transition ${
+              className={`flex-1 h-1 mx-2 sm:mx-4 rounded transition ${
                 bookingState.currentStep === 'payment'
                   ? 'bg-green-500'
                   : 'bg-gray-300'
@@ -200,7 +200,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             {/* Step 2 */}
             <div className="flex flex-col items-center">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition ${
                   bookingState.currentStep === 'payment'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-300 text-gray-600'
@@ -209,7 +209,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 2
               </div>
               <span
-                className={`text-xs mt-2 font-medium ${
+                className={`text-[10px] sm:text-xs mt-1 sm:mt-2 font-medium ${
                   bookingState.currentStep === 'payment'
                     ? 'text-blue-600'
                     : 'text-gray-500'
@@ -221,23 +221,31 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Content Area - No scroll, flex layout */}
+        <div className="flex-1 min-h-0">
           {bookingState.currentStep === 'seats' ? (
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Seat Map - Takes 2 columns */}
-                <div className="lg:col-span-2">
-                  <SeatMap
-                    tripId={trip.id}
-                    maxSeats={maxPassengers}
-                    onSeatsSelected={updateSelectedSeats}
-                  />
+            <div className="h-full p-3 sm:p-4 lg:p-6">
+              <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                {/* Left Side - Seat Map */}
+                <div className="flex flex-col min-h-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3 flex-shrink-0">
+                    Sélectionnez vos sièges
+                  </h3>
+                  <div className="flex-1 min-h-0 overflow-y-auto">
+                    <SeatMap
+                      tripId={trip.id}
+                      maxSeats={maxPassengers}
+                      onSeatsSelected={updateSelectedSeats}
+                    />
+                  </div>
                 </div>
 
-                {/* Passenger Form - Takes 1 column */}
-                <div className="lg:col-span-1">
-                  <div className="sticky top-6">
+                {/* Right Side - Passenger Form */}
+                <div className="flex flex-col min-h-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3 flex-shrink-0">
+                    Informations du voyageur
+                  </h3>
+                  <div className="flex-1 min-h-0 overflow-y-auto">
                     <PassengerInfoForm
                       selectedSeats={bookingState.selectedSeats}
                       onDataChange={updatePassengerInfo}
@@ -248,8 +256,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-full p-3 sm:p-4 lg:p-6 overflow-y-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 max-w-6xl mx-auto">
                 {/* Booking Summary - Left Side */}
                 <div>
                   <BookingSummary
@@ -276,33 +284,33 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 border-t flex items-center justify-between flex-shrink-0">
-          <div>
+        {/* Footer - Compact */}
+        <div className="bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 border-t flex items-center justify-between gap-3 flex-shrink-0">
+          <div className="min-w-0 flex-1">
             {bookingState.selectedSeats.length > 0 && (
-              <div className="text-sm">
-                <p className="text-gray-600">
+              <div className="text-xs sm:text-sm">
+                <p className="text-gray-600 truncate">
                   Sièges:{' '}
                   <span className="font-semibold text-gray-800">
                     {bookingState.selectedSeats.join(', ')}
                   </span>
                 </p>
-                <p className="text-lg font-bold text-blue-600 mt-1">
+                <p className="text-base sm:text-lg font-bold text-blue-600 mt-0.5">
                   Total: {bookingState.pricing.total.toLocaleString('fr-FR')} FCFA
                 </p>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {bookingState.currentStep === 'payment' && (
               <button
                 onClick={goBackToSeats}
                 disabled={bookingState.isProcessing}
-                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition flex items-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 sm:px-6 py-2 sm:py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition flex items-center gap-1 sm:gap-2 font-semibold text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
-                Retour
+                <span className="hidden sm:inline">Retour</span>
               </button>
             )}
 
@@ -315,7 +323,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   bookingState.isProcessing
                 }
                 className={`
-                  px-8 py-3 rounded-lg font-semibold transition text-white
+                  px-4 sm:px-8 py-2 sm:py-3 rounded-lg font-semibold transition text-white text-sm sm:text-base whitespace-nowrap
                   ${
                     bookingState.selectedSeats.length === 0 ||
                     !bookingState.passengerInfo ||
@@ -325,7 +333,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   }
                 `}
               >
-                Continuer au paiement →
+                <span className="hidden sm:inline">Continuer au paiement →</span>
+                <span className="sm:hidden">Payer →</span>
               </button>
             )}
           </div>

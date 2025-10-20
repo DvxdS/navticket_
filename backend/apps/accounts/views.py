@@ -1,11 +1,18 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .models import User, BusCompany
-from .serializers import UserRegistrationSerializer, UserLoginSerializer, CompanyRegistrationSerializer, CompanyLoginSerializer
+from .serializers import (
+    UserRegistrationSerializer, 
+    UserLoginSerializer, 
+    CompanyRegistrationSerializer, 
+    CompanyLoginSerializer,
+    LogoutSerializer,
+    CurrentUserSerializer
+)
 from shared.supabase_client import supabase_service
 import logging
 
@@ -51,6 +58,7 @@ def traveler_register(request):
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def traveler_login(request):
@@ -95,8 +103,6 @@ def traveler_login(request):
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Backend/apps/accounts/views.py
-# Replace your company_register function with this:
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -126,7 +132,7 @@ def company_register(request):
                 address=company_serializer.validated_data.get('address', ''),
                 business_license=company_serializer.validated_data.get('business_license', ''),
                 tax_number=company_serializer.validated_data.get('tax_number', ''),
-                verification_status='verified',  # Auto-verify for testing (change to 'pending' in production)
+                verification_status='verified',  # Auto-verify for testing
                 is_active=True
             )
             
@@ -134,12 +140,12 @@ def company_register(request):
             admin_user = User.objects.create_user(
                 username=user_serializer.validated_data['email'],
                 email=user_serializer.validated_data['email'],
-                password=user_serializer.validated_data['password'],  # ← ADDED: Set password
+                password=user_serializer.validated_data['password'],
                 first_name=user_serializer.validated_data['first_name'],
                 last_name=user_serializer.validated_data['last_name'],
                 phone=user_serializer.validated_data.get('phone', ''),
                 role=User.COMPANY_ADMIN,
-                company=company  # ← ADDED: Link user to company!
+                company=company
             )
             
             # Generate JWT tokens for immediate login
@@ -221,3 +227,39 @@ def company_login(request):
             return Response({'error': 'Login failed. Please try again.'}, status=status.HTTP_401_UNAUTHORIZED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    """
+    Logout user by blacklisting refresh token
+    POST /api/v1/auth/logout/
+    Body: { "refresh": "refresh_token_here" }
+    """
+    serializer = LogoutSerializer(data=request.data)
+    
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        serializer.save()
+        return Response({
+            'message': 'Logout successful'
+        }, status=status.HTTP_205_RESET_CONTENT)
+    except Exception as e:
+        return Response({
+            'error': 'Logout failed',
+            'detail': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    """
+    Get current authenticated user details
+    GET /api/v1/auth/me/
+    """
+    serializer = CurrentUserSerializer(request.user)
+    return Response(serializer.data, status=status.HTTP_200_OK)

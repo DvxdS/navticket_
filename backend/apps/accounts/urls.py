@@ -12,5 +12,7 @@ urlpatterns = [
     path('company/login/', views.company_login, name='company-login'),
     
     # Token refresh endpoint
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('logout/', views.logout_view, name='logout'),  # ← Add this
+    path('me/', views.get_current_user, name='current-user'),  # ← Add this
 ]

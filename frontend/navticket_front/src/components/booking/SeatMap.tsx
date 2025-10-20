@@ -58,19 +58,19 @@ export const SeatMap: React.FC<SeatMapProps> = ({
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
-        <p className="text-gray-600">Chargement de la carte des sièges...</p>
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-3"></div>
+        <p className="text-gray-600 text-sm">Chargement...</p>
       </div>
     );
   }
 
   if (error || !seatMap) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-500 text-5xl mb-4">⚠️</div>
-        <p className="text-red-600 font-medium mb-2">Erreur de chargement</p>
-        <p className="text-gray-600 text-sm">{error || 'Impossible de charger la carte des sièges'}</p>
+      <div className="text-center py-8">
+        <div className="text-red-500 text-4xl mb-3">⚠️</div>
+        <p className="text-red-600 font-medium text-sm mb-1">Erreur de chargement</p>
+        <p className="text-gray-600 text-xs">{error || 'Impossible de charger la carte'}</p>
       </div>
     );
   }
@@ -81,106 +81,101 @@ export const SeatMap: React.FC<SeatMapProps> = ({
     .sort((a, b) => a - b);
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header with stats */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6">
-        <div className="grid grid-cols-4 gap-4 text-center">
+    <div className="w-full">
+      {/* Header with stats - Compact */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 mb-4">
+        <div className="grid grid-cols-4 gap-2 text-center">
           <div>
-            <p className="text-2xl font-bold text-gray-800">{seatMap.total_seats}</p>
-            <p className="text-xs text-gray-600">Total</p>
+            <p className="text-lg font-bold text-gray-800">{seatMap.total_seats}</p>
+            <p className="text-[10px] text-gray-600">Total</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-green-600">{seatMap.available_seats}</p>
-            <p className="text-xs text-gray-600">Disponibles</p>
+            <p className="text-lg font-bold text-green-600">{seatMap.available_seats}</p>
+            <p className="text-[10px] text-gray-600">Disponibles</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-blue-600">{selectedSeats.length}</p>
-            <p className="text-xs text-gray-600">Sélectionnés</p>
+            <p className="text-lg font-bold text-blue-600">{selectedSeats.length}</p>
+            <p className="text-[10px] text-gray-600">Sélectionnés</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-600">{seatMap.booked_seats}</p>
-            <p className="text-xs text-gray-600">Occupés</p>
+            <p className="text-lg font-bold text-gray-600">{seatMap.booked_seats}</p>
+            <p className="text-[10px] text-gray-600">Occupés</p>
           </div>
         </div>
       </div>
 
-      {/* Selection info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <p className="text-sm text-blue-800">
-          <span className="font-semibold">{selectedSeats.length}</span> / {maxSeats} siège(s) sélectionné(s)
-          {selectedSeats.length > 0 && (
+      {/* Selection info - Compact */}
+      {selectedSeats.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-4">
+          <p className="text-xs text-blue-800">
+            <span className="font-semibold">{selectedSeats.length}</span> / {maxSeats} siège(s)
             <span className="ml-2 text-blue-600 font-medium">
               [{selectedSeats.join(', ')}]
             </span>
-          )}
-        </p>
-      </div>
+          </p>
+        </div>
+      )}
 
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mb-8 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-green-50 border-2 border-green-300 rounded"></div>
-          <span className="text-gray-700">Disponible</span>
+      {/* Legend - Compact */}
+      <div className="flex items-center justify-center gap-3 mb-4 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-5 h-5 bg-green-50 border-2 border-green-300 rounded"></div>
+          <span className="text-gray-700">Libre</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-500 border-2 border-blue-600 rounded shadow-lg"></div>
-          <span className="text-gray-700">Sélectionné</span>
+        <div className="flex items-center gap-1">
+          <div className="w-5 h-5 bg-blue-500 border-2 border-blue-600 rounded"></div>
+          <span className="text-gray-700">Choisi</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gray-200 border-2 border-gray-300 rounded"></div>
+        <div className="flex items-center gap-1">
+          <div className="w-5 h-5 bg-gray-200 border-2 border-gray-300 rounded"></div>
           <span className="text-gray-700">Occupé</span>
         </div>
       </div>
 
-      {/* BUS SHAPE CONTAINER */}
-      <div className="relative mx-auto" style={{ maxWidth: '500px' }}>
-        {/* Bus Front (rounded top) */}
+      {/* BUS SHAPE CONTAINER - Compact & Responsive */}
+      <div className="relative mx-auto max-w-[380px]">
+        {/* Bus Front (rounded top) - Compact */}
         <div className="relative">
-          <div className="bg-gradient-to-b from-blue-600 to-blue-700 rounded-t-[80px] h-24 border-t-8 border-l-8 border-r-8 border-blue-800 shadow-2xl relative overflow-hidden">
+          <div className="bg-gradient-to-b from-blue-600 to-blue-700 rounded-t-[60px] h-16 border-t-4 border-l-4 border-r-4 border-blue-800 shadow-xl relative overflow-hidden">
             {/* Windshield effect */}
-            <div className="absolute inset-x-0 top-8 h-12 bg-gradient-to-b from-blue-300/30 to-transparent"></div>
+            <div className="absolute inset-x-0 top-4 h-8 bg-gradient-to-b from-blue-300/30 to-transparent"></div>
             
             {/* Headlights */}
-            <div className="absolute bottom-4 left-8 w-6 h-6 bg-yellow-300 rounded-full shadow-lg"></div>
-            <div className="absolute bottom-4 right-8 w-6 h-6 bg-yellow-300 rounded-full shadow-lg"></div>
+            <div className="absolute bottom-2 left-6 w-4 h-4 bg-yellow-300 rounded-full shadow-md"></div>
+            <div className="absolute bottom-2 right-6 w-4 h-4 bg-yellow-300 rounded-full shadow-md"></div>
             
-            {/* Driver section */}
-            <div className="absolute bottom-4 right-1/2 transform translate-x-1/2 flex items-center gap-2 bg-gray-800/80 backdrop-blur-sm px-4 py-2 rounded-lg">
-              <span className="text-2xl">🚌</span>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm">
-                  👨‍✈️
-                </div>
-                <span className="text-white text-xs font-semibold">Chauffeur</span>
-              </div>
+            {/* Driver section - Compact */}
+            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 bg-gray-800/80 backdrop-blur-sm px-3 py-1 rounded-md">
+              <span className="text-lg">🚌</span>
+              <span className="text-white text-[10px] font-semibold">Chauffeur</span>
             </div>
           </div>
         </div>
 
-        {/* Bus Body */}
-        <div className="bg-gradient-to-b from-gray-100 to-gray-50 border-l-8 border-r-8 border-blue-800 shadow-2xl relative">
+        {/* Bus Body - Compact */}
+        <div className="bg-gradient-to-b from-gray-100 to-gray-50 border-l-4 border-r-4 border-blue-800 shadow-xl relative">
           {/* Side windows effect */}
-          <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-r from-blue-400/20 to-transparent"></div>
-          <div className="absolute right-0 top-0 bottom-0 w-2 bg-gradient-to-l from-blue-400/20 to-transparent"></div>
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-r from-blue-400/20 to-transparent"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-l from-blue-400/20 to-transparent"></div>
           
-          {/* Seats Grid */}
-          <div className="py-8 px-6 space-y-3">
+          {/* Seats Grid - Compact */}
+          <div className="py-4 px-3 space-y-2">
             {sortedRows.map(rowNum => {
               const rowSeats = sortSeatsByPosition(rows[rowNum]);
               const leftSeats = rowSeats.filter(s => s.position.startsWith('left'));
               const rightSeats = rowSeats.filter(s => s.position.startsWith('right'));
 
               return (
-                <div key={rowNum} className="flex items-center justify-center gap-3">
-                  {/* Row number (left) */}
-                  <div className="w-8 text-center">
-                    <span className="inline-block w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">
+                <div key={rowNum} className="flex items-center justify-center gap-2">
+                  {/* Row number (left) - Compact */}
+                  <div className="w-6 text-center flex-shrink-0">
+                    <span className="inline-block w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center">
                       {rowNum}
                     </span>
                   </div>
 
                   {/* Left side seats */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     {leftSeats.map(seat => (
                       <SeatButton
                         key={seat.seat_number}
@@ -192,15 +187,15 @@ export const SeatMap: React.FC<SeatMapProps> = ({
                     ))}
                   </div>
 
-                  {/* Aisle (corridor) */}
-                  <div className="w-16 h-14 flex flex-col items-center justify-center">
-                    <div className="w-full border-t-2 border-b-2 border-dashed border-gray-300 h-8 flex items-center justify-center">
-                      <span className="text-gray-300 text-2xl">⬍⬍</span>
+                  {/* Aisle (corridor) - Compact */}
+                  <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+                    <div className="w-full border-t border-b border-dashed border-gray-300 h-6 flex items-center justify-center">
+                      <span className="text-gray-300 text-lg">⬍</span>
                     </div>
                   </div>
 
                   {/* Right side seats */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     {rightSeats.map(seat => (
                       <SeatButton
                         key={seat.seat_number}
@@ -212,9 +207,9 @@ export const SeatMap: React.FC<SeatMapProps> = ({
                     ))}
                   </div>
 
-                  {/* Row number (right) */}
-                  <div className="w-8 text-center">
-                    <span className="inline-block w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">
+                  {/* Row number (right) - Compact */}
+                  <div className="w-6 text-center flex-shrink-0">
+                    <span className="inline-block w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center">
                       {rowNum}
                     </span>
                   </div>
@@ -224,49 +219,46 @@ export const SeatMap: React.FC<SeatMapProps> = ({
           </div>
         </div>
 
-        {/* Bus Back (rounded bottom) */}
-        <div className="bg-gradient-to-t from-blue-600 to-blue-700 rounded-b-[60px] h-20 border-b-8 border-l-8 border-r-8 border-blue-800 shadow-2xl relative">
+        {/* Bus Back (rounded bottom) - Compact */}
+        <div className="bg-gradient-to-t from-blue-600 to-blue-700 rounded-b-[40px] h-12 border-b-4 border-l-4 border-r-4 border-blue-800 shadow-xl relative">
           {/* Back lights */}
-          <div className="absolute top-4 left-8 w-8 h-4 bg-red-500 rounded shadow-lg"></div>
-          <div className="absolute top-4 right-8 w-8 h-4 bg-red-500 rounded shadow-lg"></div>
+          <div className="absolute top-2 left-6 w-6 h-3 bg-red-500 rounded shadow-md"></div>
+          <div className="absolute top-2 right-6 w-6 h-3 bg-red-500 rounded shadow-md"></div>
           
           {/* License plate area */}
-          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 bg-white px-4 py-1 rounded shadow-md">
-            <span className="text-gray-800 text-xs font-mono font-bold">CI - {tripId.toString().padStart(4, '0')}</span>
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-white px-3 py-0.5 rounded shadow-sm">
+            <span className="text-gray-800 text-[10px] font-mono font-bold">CI-{tripId.toString().padStart(4, '0')}</span>
           </div>
-          
-          {/* Exhaust */}
-          <div className="absolute bottom-2 right-12 w-3 h-3 bg-gray-600 rounded-full"></div>
         </div>
 
-        {/* Wheels */}
-        <div className="absolute -left-4 top-1/4 w-12 h-12 bg-gray-800 rounded-full border-4 border-gray-600 shadow-xl">
+        {/* Wheels - Smaller */}
+        <div className="absolute -left-3 top-1/4 w-8 h-8 bg-gray-800 rounded-full border-2 border-gray-600 shadow-lg">
           <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
-            <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
+            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
           </div>
         </div>
-        <div className="absolute -right-4 top-1/4 w-12 h-12 bg-gray-800 rounded-full border-4 border-gray-600 shadow-xl">
+        <div className="absolute -right-3 top-1/4 w-8 h-8 bg-gray-800 rounded-full border-2 border-gray-600 shadow-lg">
           <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
-            <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
+            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
           </div>
         </div>
-        <div className="absolute -left-4 bottom-24 w-12 h-12 bg-gray-800 rounded-full border-4 border-gray-600 shadow-xl">
+        <div className="absolute -left-3 bottom-16 w-8 h-8 bg-gray-800 rounded-full border-2 border-gray-600 shadow-lg">
           <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
-            <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
+            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
           </div>
         </div>
-        <div className="absolute -right-4 bottom-24 w-12 h-12 bg-gray-800 rounded-full border-4 border-gray-600 shadow-xl">
+        <div className="absolute -right-3 bottom-16 w-8 h-8 bg-gray-800 rounded-full border-2 border-gray-600 shadow-lg">
           <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
-            <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
+            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
           </div>
         </div>
       </div>
 
-      {/* Footer note */}
-      <div className="mt-8 text-center">
-        <div className="inline-flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg">
-          <span className="text-xl">🪟</span>
-          <span className="text-sm text-gray-700">Siège près de la fenêtre</span>
+      {/* Footer note - Compact */}
+      <div className="mt-4 text-center">
+        <div className="inline-flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-md">
+          <span className="text-sm">🪟</span>
+          <span className="text-xs text-gray-700">Siège fenêtre</span>
         </div>
       </div>
     </div>

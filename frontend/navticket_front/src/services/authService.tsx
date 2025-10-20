@@ -56,7 +56,8 @@ class AuthService {
       const refreshToken = localStorage.getItem('refresh_token');
       
       if (refreshToken) {
-        await api.post('/accounts/auth/logout/', {
+        // FIXED: Changed from /accounts/auth/logout/ to /auth/logout/
+        await api.post('/auth/logout/', {
           refresh: refreshToken,
         });
       }
@@ -72,7 +73,8 @@ class AuthService {
    * Get current user from API
    */
   async getCurrentUser(): Promise<User> {
-    const response = await api.get<User>('/accounts/auth/me/');
+    // FIXED: Changed from /accounts/auth/me/ to /auth/me/
+    const response = await api.get<User>('/auth/me/');
     return response.data;
   }
 
@@ -116,8 +118,8 @@ class AuthService {
    * Store authentication data
    */
   private storeAuthData(data: LoginResponse | SignupResponse): void {
-    localStorage.setItem('access_token', data.access);
-    localStorage.setItem('refresh_token', data.refresh);
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('refresh_token', data.refresh_token);
     localStorage.setItem('user', JSON.stringify(data.user));
   }
 

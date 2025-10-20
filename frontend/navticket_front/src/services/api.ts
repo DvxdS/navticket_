@@ -25,7 +25,6 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor - Handle token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -43,17 +42,19 @@ api.interceptors.response.use(
         }
 
         // Try to refresh the token
-        const response = await axios.post(`${BASE_URL}/accounts/auth/refresh/`, {
+        const response = await axios.post(`${BASE_URL}/auth/refresh/`, {
           refresh: refreshToken,
         });
 
-        const { access } = response.data;
+        // Backend returns { access_token: "..." } or { access: "..." }
+        // Handle both cases
+        const newAccessToken = response.data.access_token || response.data.access;
 
         // Save new token
-        localStorage.setItem('access_token', access);
+        localStorage.setItem('access_token', newAccessToken);
 
         // Retry original request with new token
-        originalRequest.headers.Authorization = `Bearer ${access}`;
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed - clear auth and redirect to login
@@ -71,6 +72,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 // ===================== TYPES =====================
 
