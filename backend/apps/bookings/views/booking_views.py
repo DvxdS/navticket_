@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db import transaction  # ← Add this import
 from ..models import Booking, Seat
 from ..serializers import (
     BookingCreateSerializer,
@@ -155,6 +156,7 @@ def get_seat_map(request, trip_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic  # ← Add this decorator
 def reserve_seats(request):
     """
     Temporarily reserve seats for 5 minutes.
@@ -181,7 +183,7 @@ def reserve_seats(request):
     # Release expired reservations first
     release_expired_reservations()
     
-    # Get requested seats with lock
+    # Get requested seats with lock (now inside transaction)
     seats = Seat.objects.select_for_update().filter(
         trip=trip,
         seat_number__in=seat_numbers
@@ -219,6 +221,7 @@ def reserve_seats(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic  # ← Add this decorator
 def release_seats(request):
     """
     Release temporarily reserved seats.
@@ -266,6 +269,7 @@ def release_seats(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic  # ← Add this decorator
 def regenerate_trip_seats(request, trip_id):
     """
     Regenerate seats for a trip (admin/company only).

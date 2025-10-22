@@ -372,12 +372,13 @@ class TripSerializer(serializers.ModelSerializer):
     occupancy_rate = serializers.ReadOnlyField()
     can_be_booked = serializers.ReadOnlyField()
     company_name = serializers.CharField(source='route.bus_company.name', read_only=True)
+    company = serializers.SerializerMethodField()  # ← Add this line
     template_info = serializers.SerializerMethodField()
     
     class Meta:
         model = Trip
         fields = [
-            'id', 'route', 'company_name', 'departure_date', 'departure_time', 
+            'id', 'route', 'company_name', 'company', 'departure_date', 'departure_time',  # ← Add 'company' here
             'arrival_time', 'departure_datetime', 'arrival_datetime',
             'total_seats', 'available_seats', 'occupancy_rate', 'is_full',
             'price', 'bus_number', 'bus_type', 'status', 'can_be_booked',
@@ -394,6 +395,26 @@ class TripSerializer(serializers.ModelSerializer):
             }
         return None
 
+    def get_company(self, obj):
+        """Get company object"""
+        
+        if hasattr(obj, 'template') and obj.template and obj.template.bus_company:
+            return {
+                'id': obj.template.bus_company.id, 
+                'name': obj.template.bus_company.name,
+                'email': obj.template.bus_company.email,
+                'phone': obj.template.bus_company.phone
+            }
+        
+        elif obj.route and obj.route.bus_company:
+            return {
+                'id': obj.route.bus_company.id, 
+                'name': obj.route.bus_company.name,
+                'email': obj.route.bus_company.email,
+                'phone': obj.route.bus_company.phone
+            }
+        return None
+
 
 class TripListSerializer(serializers.ModelSerializer):
     """Trip serializer for listing with route and company info"""
@@ -405,7 +426,7 @@ class TripListSerializer(serializers.ModelSerializer):
     can_be_booked = serializers.ReadOnlyField()
     company_name = serializers.CharField(source='route.bus_company.name', read_only=True)
     
-    # ✅ Add station serializers
+    # 
     departure_station = serializers.SerializerMethodField()
     arrival_station = serializers.SerializerMethodField()
     

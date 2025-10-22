@@ -11,7 +11,7 @@ from django.utils import timezone
 from datetime import datetime, date
 from rest_framework import viewsets
 
-from .models import Route, Trip
+from .models import Route, Trip, TripTemplate
 from .serializers import (
     RouteListSerializer, RouteCreateSerializer, 
     TripListSerializer, TripCreateSerializer, 
@@ -97,9 +97,12 @@ class TripListCreateView(generics.ListCreateAPIView):
         queryset = Trip.objects.filter(
             route__bus_company=self.request.user.company
         ).select_related(
+            'route',
             'route__origin_city', 
             'route__destination_city', 
             'route__bus_company',
+            'template',                 # ← Added
+            'template__bus_company',    # ← Added
             'created_by'
         )
         
@@ -148,22 +151,18 @@ class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'pk'
     
     def get_permissions(self):
-        """
-        Public can view (GET), only authenticated company can modify
-        """
         if self.request.method == 'GET':
             return [AllowAny()]
         return [IsAuthenticated()]
     
     def get_queryset(self):
-        """
-        For GET: Return all trips (public)
-        For PUT/PATCH/DELETE: Return only company's trips
-        """
         queryset = Trip.objects.select_related(
+            'route',
             'route__origin_city',
             'route__destination_city',
             'route__bus_company',
+            'template',                 # ← Added
+            'template__bus_company',    # ← Added
             'created_by'
         )
         
@@ -274,10 +273,12 @@ class TripSearchView(generics.ListAPIView):
             'route__origin_city',
             'route__destination_city',
             'route__bus_company',
-            'departure_station',        # ✅ Add this
-            'arrival_station',          # ✅ Add this
-            'departure_station__city',  # ✅ Add this (for station city info)
-            'arrival_station__city',    # ✅ Add this (for station city info)
+            'template',                    # ← Added
+            'template__bus_company',       # ← Added
+            'departure_station',        
+            'arrival_station',          
+            'departure_station__city', 
+            'arrival_station__city'
         )
         
         # Search by origin and destination cities

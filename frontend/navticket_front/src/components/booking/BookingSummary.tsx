@@ -30,7 +30,7 @@ export const BookingSummary: React.FC<BookingSummaryProps> = ({
           <div className="flex-1">
             <p className="text-sm text-gray-600">Trajet</p>
             <p className="font-semibold text-gray-900">
-              {trip.route.origin} → {trip.route.destination}
+            {trip.route.origin_city?.name || 'Origine'} → {trip.route.destination_city?.name || 'Destination'}
             </p>
           </div>
         </div>
@@ -67,7 +67,7 @@ export const BookingSummary: React.FC<BookingSummaryProps> = ({
         <div className="flex items-center justify-between pt-4 border-t border-blue-200">
           <div>
             <p className="text-sm text-gray-600">Compagnie</p>
-            <p className="font-semibold text-gray-900">{trip.company.name}</p>
+            <p className="font-semibold text-gray-900"> { trip.company_name || 'Compagnie de transport'}</p>
           </div>
           {trip.bus_number && (
             <div className="text-right">

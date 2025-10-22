@@ -182,12 +182,12 @@ export const TripDetailsPage: React.FC = () => {
               {/* Route Card */}
               <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
-                  <h1 className="text-3xl font-bold mb-2">
-                    {trip.route.origin} → {trip.route.destination}
+                <h1 className="text-3xl font-bold mb-2">
+                    {trip.route.origin_city?.name || 'Origine'} → {trip.route.destination_city?.name || 'Destination'}
                   </h1>
                   <p className="text-blue-100 flex items-center gap-2">
                     <Bus className="w-5 h-5" />
-                    {trip.company?.name}
+                    {trip.company?.name || trip.company_name || 'Compagnie de transport'}
                   </p>
                 </div>
 

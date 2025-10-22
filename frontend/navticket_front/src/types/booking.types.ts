@@ -4,39 +4,60 @@
 // ============================================
 
 // Route from backend
+// Company type
+export interface Company {
+  id: number;
+  name: string;
+  logo?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface City {
+  id: number;
+  name: string;
+  state_province: string;
+  country?: string;
+  display_name?: string;
+}
+
+// Route type (matches backend RouteListSerializer)
 export interface Route {
-    id: number;
-    origin: string;
-    destination: string;
-    distance_km?: number;
-  }
-  
-  // Company from backend
-  export interface Company {
-    id: number;
-    name: string;
-    logo?: string;
-    email?: string;
-    phone?: string;
-  }
-  
-  // Trip from backend (matches transport.Trip model)
-  export interface Trip {
-    id: number;
-    route: Route;
-    company: Company;
-    departure_date: string; // YYYY-MM-DD format
-    departure_time: string; // HH:MM:SS format
-    arrival_time: string; // HH:MM:SS format
-    price: string; // Decimal as string from backend
-    available_seats: number;
-    total_seats: number;
-    seat_layout: '3x2' | '2x2';
-    bus_number?: string;
-    bus_type?: string;
-    created_at?: string;
-    updated_at?: string;
-  }
+  id: number;
+  origin_city: City;  // ← Object, not string
+  destination_city: City;  // ← Object, not string
+  bus_company?: Company;  // ← Optional company in route
+  distance_km?: string;
+  estimated_duration_minutes?: number;
+  base_price?: string;
+  route_display?: string;  // ← Optional pre-formatted display
+}
+
+// Trip type (matches backend TripSerializer)
+export interface Trip {
+  id: number;
+  route: Route;
+  company?: Company;  // ← Company object from get_company() method
+  company_name?: string;  // ← Direct string field
+  departure_date: string;
+  departure_time: string;
+  arrival_time: string;
+  departure_datetime?: string;
+  arrival_datetime?: string;
+  price: string;
+  available_seats: number;
+  total_seats: number;
+  occupancy_rate?: number;
+  is_full?: boolean;
+  seat_layout?: '3x2' | '2x2';
+  bus_number?: string;
+  bus_type?: string;
+  status?: string;
+  can_be_booked?: boolean;
+  template_info?: any;
+  created_at?: string;
+  updated_at?: string;
+}
   
   // Passenger data for form (before sending to backend)
   export interface PassengerFormData {
