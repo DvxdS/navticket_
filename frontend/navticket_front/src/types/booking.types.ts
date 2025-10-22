@@ -97,7 +97,7 @@ export interface Trip {
     passengers: PassengerCreateData[]; // Array of passengers with seat assignments
     contact_email: string;
     contact_phone: string;
-    payment_method: 'stripe' | 'orange_money' | 'mtn_money' | 'wave';
+    payment_method?: 'stripe_card' | 'wave' | 'orange_money' | 'mtn_money'; 
   }
   
   // Booking as returned from backend (matches bookings.Booking model)

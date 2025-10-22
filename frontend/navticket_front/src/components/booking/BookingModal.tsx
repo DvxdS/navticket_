@@ -40,7 +40,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     },
   });
 
-  // Close modal on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -52,7 +51,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen]);
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -65,36 +63,30 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     };
   }, [isOpen]);
 
-  // Handle modal close
   const handleClose = async () => {
     if (showConfirmation) {
-      // Just close if showing confirmation
       setShowConfirmation(false);
       onClose();
     } else {
-      // Cancel booking and release seats
       await cancelBooking();
       onClose();
     }
   };
 
-  // Handle continue to payment
   const handleContinueToPayment = async () => {
     const success = await goToPayment();
     if (!success) {
-      // Error already shown by toast in useBooking
       return;
     }
   };
 
-  // Handle payment submission
-  const handlePaymentSubmit = async (paymentMethod: string) => {
-    await processPayment(paymentMethod);
+  const handlePaymentSubmit = async () => {
+    await processPayment();
   };
+  
 
   if (!isOpen) return null;
 
-  // Show confirmation screen
   if (showConfirmation) {
     return (
       <div
@@ -105,7 +97,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden animate-slideUp"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold">Réservation confirmée</h2>
@@ -120,7 +111,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </button>
           </div>
 
-          {/* Confirmation Content */}
           <div className="p-6 overflow-y-auto max-h-[calc(95vh-100px)]">
             <BookingConfirmation
               bookingReference={bookingReference}
@@ -143,15 +133,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         className="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] h-[98vh] overflow-hidden flex flex-col animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header - Compact */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 sm:p-5 flex items-center justify-between flex-shrink-0">
           <div className="flex-1 min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold mb-0.5 truncate">Réservation de ticket</h2>
             <p className="text-blue-100 text-xs sm:text-sm truncate">
-              {trip.route.origin} → {trip.route.destination}
+            {trip.route.origin_city?.name || 'Origine'} → {trip.route.destination_city?.name || 'Destination'}
             </p>
             <p className="text-blue-200 text-[10px] sm:text-xs mt-0.5 truncate">
-              {trip.company?.name} • {trip.departure_date} à {trip.departure_time}
+            { trip.company_name || 'Compagnie de transport'} • {trip.departure_date} à {trip.departure_time}
             </p>
           </div>
           <button
@@ -163,10 +152,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </button>
         </div>
 
-        {/* Progress Indicator - Compact */}
         <div className="bg-gray-50 px-4 sm:px-6 py-3 border-b flex-shrink-0">
           <div className="flex items-center justify-center max-w-md mx-auto">
-            {/* Step 1 */}
             <div className="flex flex-col items-center">
               <div
                 className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition ${
@@ -188,7 +175,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </span>
             </div>
 
-            {/* Connector */}
             <div
               className={`flex-1 h-1 mx-2 sm:mx-4 rounded transition ${
                 bookingState.currentStep === 'payment'
@@ -197,7 +183,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               }`}
             ></div>
 
-            {/* Step 2 */}
             <div className="flex flex-col items-center">
               <div
                 className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition ${
@@ -221,12 +206,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
         </div>
 
-        {/* Content Area - No scroll, flex layout */}
         <div className="flex-1 min-h-0">
           {bookingState.currentStep === 'seats' ? (
             <div className="h-full p-3 sm:p-4 lg:p-6">
               <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-                {/* Left Side - Seat Map */}
                 <div className="flex flex-col min-h-0">
                   <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3 flex-shrink-0">
                     Sélectionnez vos sièges
@@ -240,7 +223,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </div>
                 </div>
 
-                {/* Right Side - Passenger Form */}
                 <div className="flex flex-col min-h-0">
                   <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3 flex-shrink-0">
                     Informations du voyageur
@@ -258,7 +240,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           ) : (
             <div className="h-full p-3 sm:p-4 lg:p-6 overflow-y-auto">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 max-w-6xl mx-auto">
-                {/* Booking Summary - Left Side */}
                 <div>
                   <BookingSummary
                     trip={trip}
@@ -272,7 +253,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   />
                 </div>
 
-                {/* Payment Section - Right Side */}
                 <div>
                   <PaymentSection
                     onPaymentSubmit={handlePaymentSubmit}
@@ -284,7 +264,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           )}
         </div>
 
-        {/* Footer - Compact */}
         <div className="bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 border-t flex items-center justify-between gap-3 flex-shrink-0">
           <div className="min-w-0 flex-1">
             {bookingState.selectedSeats.length > 0 && (

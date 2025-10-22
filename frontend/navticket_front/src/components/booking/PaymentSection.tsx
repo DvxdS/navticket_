@@ -1,8 +1,10 @@
+// src/components/booking/PaymentSection.tsx
+
 import React, { useState } from 'react';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface PaymentSectionProps {
-  onPaymentSubmit: (paymentMethod: string) => Promise<void>;
+  onPaymentSubmit: () => Promise<void>;
   isProcessing: boolean;
 }
 
@@ -14,30 +16,41 @@ interface PaymentOption {
   logo: string;
   description: string;
   badge?: string;
-  color: string; // Brand color for selected state
+  color: string;
+  available: boolean;
 }
 
 export const PaymentSection: React.FC<PaymentSectionProps> = ({
   onPaymentSubmit,
   isProcessing
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('orange_money');
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('stripe');
 
   const paymentOptions: PaymentOption[] = [
+    {
+      id: 'stripe',
+      name: 'Carte Bancaire',
+      logo: '/assets/card.png',
+      description: 'Visa, Mastercard, American Express',
+      color: 'purple',
+      available: true,
+      badge: 'Recommandé'
+    },
     {
       id: 'orange_money',
       name: 'Orange Money',
       logo: '/assets/orange money.png',
       description: 'Paiement mobile rapide et sécurisé',
-      
-      color: 'orange'
+      color: 'orange',
+      available: false
     },
     {
       id: 'mtn_money',
       name: 'MTN Mobile Money',
       logo: '/assets/mtn.jpg',
       description: 'Paiement via MTN Money',
-      color: 'yellow'
+      color: 'yellow',
+      available: false
     },
     {
       id: 'wave',
@@ -45,23 +58,22 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       logo: '/assets/wave.png',
       description: 'Paiement instantané avec Wave',
       color: 'blue',
-      badge: 'Populaire',
-    },
-    {
-      id: 'stripe',
-      name: 'Carte Bancaire',
-      logo: '/assets/card.png',
-      description: 'Visa, Mastercard, American Express',
-      color: 'purple'
+      available: false
     },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onPaymentSubmit(selectedMethod);
+    
+    if (selectedMethod !== 'stripe') {
+      return;
+    }
+    
+    await onPaymentSubmit();
   };
 
-  const getBorderColor = (color: string, isSelected: boolean) => {
+  const getBorderColor = (color: string, isSelected: boolean, available: boolean) => {
+    if (!available) return 'border-gray-200';
     if (!isSelected) return 'border-gray-200';
     
     const colors: Record<string, string> = {
@@ -73,7 +85,8 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
     return colors[color] || 'border-blue-500';
   };
 
-  const getBgColor = (color: string, isSelected: boolean) => {
+  const getBgColor = (color: string, isSelected: boolean, available: boolean) => {
+    if (!available) return 'bg-gray-50';
     if (!isSelected) return 'bg-white';
     
     const colors: Record<string, string> = {
@@ -107,7 +120,6 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Header */}
       <div className="text-center">
         <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
           Choisissez votre mode de paiement
@@ -117,7 +129,6 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         </p>
       </div>
 
-      {/* Payment Options Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {paymentOptions.map((option) => {
           const isSelected = selectedMethod === option.id;
@@ -125,29 +136,33 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             <button
               key={option.id}
               type="button"
-              onClick={() => setSelectedMethod(option.id)}
-              disabled={isProcessing}
+              onClick={() => option.available && setSelectedMethod(option.id)}
+              disabled={isProcessing || !option.available}
               className={`
                 relative p-4 sm:p-5 rounded-xl border-2 transition-all duration-200
-                ${getBorderColor(option.color, isSelected)}
-                ${getBgColor(option.color, isSelected)}
-                ${isSelected ? 'shadow-lg scale-105' : 'hover:border-gray-300 hover:shadow-md'}
-                ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                ${getBorderColor(option.color, isSelected, option.available)}
+                ${getBgColor(option.color, isSelected, option.available)}
+                ${isSelected && option.available ? 'shadow-lg scale-105' : ''}
+                ${option.available && !isProcessing ? 'hover:border-gray-300 hover:shadow-md cursor-pointer' : 'cursor-not-allowed'}
+                ${!option.available || isProcessing ? 'opacity-50' : ''}
               `}
             >
-              {/* Badge */}
-              {option.badge && (
+              {option.badge && option.available && (
                 <span className="absolute top-2 right-2 px-2 py-0.5 bg-green-500 text-white text-[10px] sm:text-xs font-semibold rounded-full">
                   {option.badge}
                 </span>
               )}
 
-              {/* Logo & Content */}
+              {!option.available && (
+                <span className="absolute top-2 right-2 px-2 py-0.5 bg-gray-400 text-white text-[10px] sm:text-xs font-semibold rounded-full">
+                  Bientôt
+                </span>
+              )}
+
               <div className="flex items-start gap-3 sm:gap-4">
-                {/* Logo Container */}
                 <div className={`
                   flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg flex items-center justify-center overflow-hidden
-                  ${isSelected ? 'bg-white' : 'bg-gray-50'}
+                  ${isSelected && option.available ? 'bg-white' : 'bg-gray-50'}
                   transition-colors
                 `}>
                   <img 
@@ -155,17 +170,15 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                     alt={option.name}
                     className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
                     onError={(e) => {
-                      // Fallback if image fails to load
                       e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"%3E%3Crect x="3" y="6" width="18" height="12" rx="2" /%3E%3Cpath d="M3 10h18" /%3E%3C/svg%3E';
                     }}
                   />
                 </div>
 
-                {/* Text Content */}
                 <div className="flex-1 text-left min-w-0">
                   <h4 className="font-semibold text-sm sm:text-base text-gray-800 mb-0.5 sm:mb-1 flex items-center gap-2">
                     <span className="truncate">{option.name}</span>
-                    {isSelected && (
+                    {isSelected && option.available && (
                       <CheckCircle className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${getCheckColor(option.color)}`} />
                     )}
                   </h4>
@@ -175,8 +188,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                 </div>
               </div>
 
-              {/* Selected Ring Indicator */}
-              {isSelected && (
+              {isSelected && option.available && (
                 <div className={`absolute inset-0 rounded-xl ring-2 ${getRingColor(option.color)} pointer-events-none`}></div>
               )}
             </button>
@@ -184,76 +196,11 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         })}
       </div>
 
-      {/* Payment Instructions Based on Selection */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
-        <h4 className="font-semibold text-sm sm:text-base text-gray-800 mb-3">
-          Comment ça marche?
-        </h4>
-        
-        {selectedMethod === 'orange_money' && (
-          <ol className="space-y-2 text-xs sm:text-sm text-gray-600">
-            <li className="flex gap-2">
-              <span className="font-semibold text-orange-600 flex-shrink-0">1.</span>
-              <span>Cliquez sur "Payer maintenant"</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-semibold text-orange-600 flex-shrink-0">2.</span>
-              <span>Vous recevrez un message USSD sur votre téléphone</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-semibold text-orange-600 flex-shrink-0">3.</span>
-              <span>Composez #144# et suivez les instructions</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-semibold text-orange-600 flex-shrink-0">4.</span>
-              <span>Confirmez le paiement avec votre code PIN</span>
-            </li>
-          </ol>
-        )}
-
-        {selectedMethod === 'mtn_money' && (
-          <ol className="space-y-2 text-xs sm:text-sm text-gray-600">
-            <li className="flex gap-2">
-              <span className="font-semibold text-yellow-600 flex-shrink-0">1.</span>
-              <span>Cliquez sur "Payer maintenant"</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-semibold text-yellow-600 flex-shrink-0">2.</span>
-              <span>Vous recevrez une notification push</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-semibold text-yellow-600 flex-shrink-0">3.</span>
-              <span>Ouvrez l'app MTN MoMo et validez</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-semibold text-yellow-600 flex-shrink-0">4.</span>
-              <span>Confirmez avec votre code secret</span>
-            </li>
-          </ol>
-        )}
-
-        {selectedMethod === 'wave' && (
-          <ol className="space-y-2 text-xs sm:text-sm text-gray-600">
-            <li className="flex gap-2">
-              <span className="font-semibold text-blue-600 flex-shrink-0">1.</span>
-              <span>Cliquez sur "Payer maintenant"</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-semibold text-blue-600 flex-shrink-0">2.</span>
-              <span>Scannez le QR code avec Wave</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-semibold text-blue-600 flex-shrink-0">3.</span>
-              <span>Confirmez le montant dans l'application</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-semibold text-blue-600 flex-shrink-0">4.</span>
-              <span>Validez avec votre code PIN</span>
-            </li>
-          </ol>
-        )}
-
-        {selectedMethod === 'stripe' && (
+      {selectedMethod === 'stripe' && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 sm:p-5">
+          <h4 className="font-semibold text-sm sm:text-base text-gray-800 mb-3">
+            Comment ça marche?
+          </h4>
           <ol className="space-y-2 text-xs sm:text-sm text-gray-600">
             <li className="flex gap-2">
               <span className="font-semibold text-purple-600 flex-shrink-0">1.</span>
@@ -261,7 +208,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             </li>
             <li className="flex gap-2">
               <span className="font-semibold text-purple-600 flex-shrink-0">2.</span>
-              <span>Vous serez redirigé vers la page de paiement sécurisée</span>
+              <span>Vous serez redirigé vers Stripe (paiement sécurisé)</span>
             </li>
             <li className="flex gap-2">
               <span className="font-semibold text-purple-600 flex-shrink-0">3.</span>
@@ -269,27 +216,40 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             </li>
             <li className="flex gap-2">
               <span className="font-semibold text-purple-600 flex-shrink-0">4.</span>
-              <span>Validez le paiement</span>
+              <span>Confirmez le paiement</span>
             </li>
           </ol>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Security Badge */}
+      {selectedMethod !== 'stripe' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-sm text-amber-900 mb-1">
+              Méthode non disponible
+            </h4>
+            <p className="text-xs text-amber-700">
+              Cette méthode de paiement sera bientôt disponible. 
+              Veuillez utiliser le paiement par carte pour le moment.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-gray-600 bg-green-50 border border-green-200 rounded-lg p-2 sm:p-3">
         <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0" />
         <span>Paiement 100% sécurisé et crypté</span>
       </div>
 
-      {/* Submit Button */}
       <button
         type="submit"
-        disabled={isProcessing}
+        disabled={isProcessing || selectedMethod !== 'stripe'}
         className={`
           w-full flex items-center justify-center gap-2 sm:gap-3
           py-3 sm:py-4 px-4 sm:px-6 rounded-xl font-bold text-base sm:text-lg text-white
           transition-all duration-200
-          ${isProcessing
+          ${isProcessing || selectedMethod !== 'stripe'
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl active:scale-95'
           }
@@ -308,7 +268,6 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         )}
       </button>
 
-      {/* Terms */}
       <p className="text-[10px] sm:text-xs text-center text-gray-500">
         En cliquant sur "Payer maintenant", vous acceptez nos{' '}
         <button type="button" className="text-blue-600 hover:underline">

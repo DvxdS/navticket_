@@ -3,7 +3,9 @@ import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import Landing from '@/pages/Landing';
 import SearchResults from '@/pages/SearchResults';
-import { TripDetailsPage } from '@/pages/TripDetailsPage'; // Add this
+import { TripDetailsPage } from '@/pages/TripDetailsPage';
+import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
+import { PaymentCancelPage } from './pages/PaymentCancelPage';
 
 function App() {
   return (
@@ -12,6 +14,8 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/search" element={<SearchResults />} />
         <Route path="/trip/:tripId" element={<TripDetailsPage />} /> {/* Add this */}
+        <Route path="/payment/success" element={<PaymentSuccessPage />} />
+        <Route path="/payment/cancel" element={<PaymentCancelPage />} />
       </Routes>
 
       <Toaster 

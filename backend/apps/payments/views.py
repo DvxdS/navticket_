@@ -1,6 +1,4 @@
-# Backend/apps/payments/views.py
-
-# Backend/apps/payments/views.py
+# Backend/apps/payments/views.py - FIXES APPLIED
 
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
@@ -31,6 +29,10 @@ logger = logging.getLogger(__name__)
 
 
 class PaymentInitializeView(generics.CreateAPIView):
+    """
+    Initialize payment and create Stripe checkout session
+    POST /api/payments/initialize/
+    """
     serializer_class = PaymentInitializeSerializer
     permission_classes = [IsAuthenticated]
     
@@ -43,7 +45,18 @@ class PaymentInitializeView(generics.CreateAPIView):
         cancel_url = serializer.validated_data['cancel_url']
         
         # Get booking
-        booking = get_object_or_404(Booking, booking_reference=booking_reference)
+        booking = get_object_or_404(
+            Booking, 
+            booking_reference=booking_reference,
+            user=request.user  # Ensure user owns the booking
+        )
+        
+        # Check if booking is already paid
+        if booking.payment_status == 'paid':
+            return Response({
+                'success': False,
+                'message': 'Booking already paid'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         # Create Stripe checkout session
         payment, checkout_url, error = create_stripe_checkout_session(
@@ -71,6 +84,7 @@ class PaymentInitializeView(generics.CreateAPIView):
 
 
 class PaymentListView(generics.ListAPIView):
+    """List user's payments"""
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
     
@@ -85,6 +99,7 @@ class PaymentListView(generics.ListAPIView):
 
 
 class PaymentDetailView(generics.RetrieveAPIView):
+    """Get payment details"""
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
     
@@ -101,6 +116,11 @@ class PaymentDetailView(generics.RetrieveAPIView):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def verify_payment_view(request):
+    """
+    Verify payment status after user returns from Stripe
+    POST /api/payments/verify/
+    Body: { "booking_reference": "NVT-..." }
+    """
     booking_reference = request.data.get('booking_reference')
     
     if not booking_reference:
@@ -109,9 +129,21 @@ def verify_payment_view(request):
             'message': 'booking_reference is required'
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    # Get booking
+    try:
+        booking = Booking.objects.get(
+            booking_reference=booking_reference,
+            user=request.user
+        )
+    except Booking.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Booking not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
     # Get the latest payment for this booking
     payment = Payment.objects.filter(
-        booking__booking_reference=booking_reference,
+        booking=booking,
         user=request.user
     ).order_by('-created_at').first()
     
@@ -121,31 +153,55 @@ def verify_payment_view(request):
             'message': 'Payment not found'
         }, status=status.HTTP_404_NOT_FOUND)
     
+    # Check if already completed
+    if payment.status == 'completed':
+        return Response({
+            'success': True,
+            'message': 'Payment already confirmed',
+            'data': {
+                'booking_reference': booking_reference,
+                'payment_status': payment.status,
+                'booking_status': booking.booking_status
+            }
+        }, status=status.HTTP_200_OK)
+    
     if not payment.stripe_checkout_session_id:
         return Response({
             'success': False,
             'message': 'Payment session not found'
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    # Verify with Stripe
     success, message = verify_stripe_payment(payment.stripe_checkout_session_id)
     
     if success:
-        # Generate QR and send email
-        booking = payment.booking
+        # Refresh payment and booking from database
+        payment.refresh_from_db()
+        booking.refresh_from_db()
+        
+        # Generate QR code if not exists
         if not booking.qr_code_data:
             booking.generate_and_save_qr()
+        
+        # Send confirmation email
         booking.send_confirmation_email()
+        
+        logger.info(f"✅ Payment verified and email sent for booking {booking_reference}")
         
         return Response({
             'success': True,
-            'message': message,
+            'message': 'Payment confirmed successfully',
             'data': {
                 'booking_reference': booking_reference,
                 'payment_status': payment.status,
-                'booking_status': payment.booking.booking_status
+                'booking_status': booking.booking_status
             }
         }, status=status.HTTP_200_OK)
     else:
+        # Payment failed or incomplete
+        payment.status = 'failed'
+        payment.save()
+        
         return Response({
             'success': False,
             'message': message
@@ -156,7 +212,12 @@ def verify_payment_view(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def stripe_webhook(request):
-    """Handle Stripe webhook events"""
+    """
+    Handle Stripe webhook events
+    POST /api/payments/webhook/stripe/
+    
+    Note: For local testing without webhook, use verify_payment_view instead
+    """
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
     
@@ -164,13 +225,15 @@ def stripe_webhook(request):
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
         )
-    except ValueError:
-        return Response({'error': 'Invalid payload'}, status=400)
-    except stripe.error.SignatureVerificationError:
-        return Response({'error': 'Invalid signature'}, status=400)
+    except ValueError as e:
+        logger.error(f"❌ Invalid webhook payload: {e}")
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"❌ Invalid webhook signature: {e}")
+        return HttpResponse(status=400)
     
     # Log webhook
-    WebhookLog.objects.create(
+    webhook_log = WebhookLog.objects.create(
         provider='stripe',
         event_type=event['type'],
         payload=event
@@ -179,39 +242,69 @@ def stripe_webhook(request):
     # Handle checkout.session.completed
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
+        session_id = session['id']
         
         try:
-            # Find payment by stripe session id
+            # ✅ FIX: Search by stripe_checkout_session_id (not stripe_payment_intent_id)
             payment = Payment.objects.get(
-                stripe_payment_intent_id=session['id'],
+                stripe_checkout_session_id=session_id,
                 status='pending'
             )
             
             # Update payment status
+            payment.stripe_payment_intent_id = session.get('payment_intent')
             payment.status = 'completed'
-            payment.processed_at = timezone.now()
+            payment.completed_at = timezone.now()
             payment.save()
             
             # Update booking status
             booking = payment.booking
+            booking.payment_status = 'paid'
             booking.booking_status = 'confirmed'
             booking.save()
             
-            # 🎫 NEW: Generate QR code and send email
-            booking.generate_and_save_qr()
+            # Generate QR code and send email
+            if not booking.qr_code_data:
+                booking.generate_and_save_qr()
             booking.send_confirmation_email()
             
-            logger.info(f"Payment completed and email sent for booking {booking.booking_reference}")
+            # Mark webhook as processed
+            webhook_log.processed = True
+            webhook_log.save()
+            
+            logger.info(f"✅ Webhook processed: Payment completed for booking {booking.booking_reference}")
             
         except Payment.DoesNotExist:
-            logger.error(f"Payment not found for session {session['id']}")
+            logger.error(f"❌ Payment not found for session {session_id}")
+            webhook_log.error_message = f"Payment not found for session {session_id}"
+            webhook_log.save()
     
-    return Response({'status': 'success'}, status=200)
+    elif event['type'] == 'payment_intent.payment_failed':
+        payment_intent = event['data']['object']
+        
+        try:
+            payment = Payment.objects.get(
+                stripe_payment_intent_id=payment_intent['id']
+            )
+            
+            payment.status = 'failed'
+            payment.save()
+            
+            webhook_log.processed = True
+            webhook_log.save()
+            
+            logger.warning(f"⚠️ Payment failed for payment {payment.id}")
+            
+        except Payment.DoesNotExist:
+            logger.error(f"❌ Payment not found for intent {payment_intent['id']}")
+    
+    return HttpResponse(status=200)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def payment_stats_view(request):
+    """Get user's payment statistics"""
     user = request.user
     payments = Payment.objects.filter(user=user)
     
@@ -227,5 +320,3 @@ def payment_stats_view(request):
         'success': True,
         'data': stats
     })
-
-# Create your views here.

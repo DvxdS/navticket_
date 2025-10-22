@@ -1,72 +1,103 @@
+// Frontend/src/services/bookingService.ts
+
 import api from './api';
 import type {
   CreateBookingRequest,
   BookingResponse,
   Booking,
-  
 } from '../types/booking.types';
 import { parseDecimal } from '../types/booking.types';
 
 class BookingService {
   /**
    * Create a new booking
-   * POST /api/v1/bookings/bookings/
+   * POST /api/v1/bookings/create/
    */
   async createBooking(data: CreateBookingRequest): Promise<BookingResponse> {
-    const response = await api.post<BookingResponse>('/bookings/bookings/', data);
-    return response.data;
+    const response = await api.post('/bookings/create/', data);
+    
+    // Backend returns: { success: true, message: "...", data: {...} }
+    if (response.data.success) {
+      return {
+        id: response.data?.id,
+        booking_reference: response.data.data.booking_reference,
+        booking: response.data.data,
+        message: response.data.message,
+      };
+    }
+    
+    throw new Error(response.data.message || 'Booking creation failed');
   }
 
   /**
-   * Get booking by ID
-   * GET /api/v1/bookings/bookings/{id}/
-   */
-  async getBooking(bookingId: number): Promise<Booking> {
-    const response = await api.get<Booking>(`/bookings/bookings/${bookingId}/`);
-    return response.data;
-  }
-
-  /**
-   * Get booking by reference code
-   * GET /api/v1/bookings/bookings/by-reference/{reference}/
+   * Get booking by reference
+   * GET /api/v1/bookings/<booking_reference>/
    */
   async getBookingByReference(reference: string): Promise<Booking> {
-    const response = await api.get<Booking>(`/bookings/bookings/by-reference/${reference}/`);
+    const response = await api.get(`/bookings/${reference}/`);
     return response.data;
   }
 
   /**
-   * Get all user bookings
-   * GET /api/v1/bookings/bookings/
+   * Get user's bookings
+   * GET /api/v1/bookings/
    */
   async getUserBookings(): Promise<Booking[]> {
-    const response = await api.get<Booking[]>('/bookings/bookings/');
+    const response = await api.get('/bookings/');
     return response.data;
   }
 
   /**
    * Cancel a booking
-   * POST /api/v1/bookings/bookings/{id}/cancel/
+   * POST /api/v1/bookings/<booking_reference>/cancel/
    */
-  async cancelBooking(bookingId: number): Promise<{ message: string; success: boolean }> {
-    const response = await api.post(`/bookings/bookings/${bookingId}/cancel/`);
+  async cancelBooking(bookingReference: string, reason?: string): Promise<any> {
+    const response = await api.post(`/bookings/${bookingReference}/cancel/`, {
+      reason: reason || ''
+    });
+    return response.data;
+  }
+
+  /**
+   * Get booking stats
+   * GET /api/v1/bookings/stats/
+   */
+  async getBookingStats(): Promise<any> {
+    const response = await api.get('/bookings/stats/');
     return response.data;
   }
 
   /**
    * Download ticket PDF
-   * GET /api/v1/bookings/bookings/{id}/download-ticket/
+   * GET /api/v1/bookings/<booking_reference>/ticket/download/
    */
-  async downloadTicket(bookingId: number): Promise<Blob> {
-    const response = await api.get(`/bookings/bookings/${bookingId}/download-ticket/`, {
+  async downloadTicket(bookingReference: string): Promise<Blob> {
+    const response = await api.get(`/bookings/${bookingReference}/ticket/download/`, {
       responseType: 'blob',
     });
     return response.data;
   }
 
   /**
-   * Calculate pricing breakdown from backend decimal strings
-   * Handles backend Decimal fields returned as strings
+   * Get QR code
+   * GET /api/v1/bookings/<booking_reference>/qr-code/
+   */
+  async getQRCode(bookingReference: string): Promise<any> {
+    const response = await api.get(`/bookings/${bookingReference}/qr-code/`);
+    return response.data;
+  }
+
+  /**
+   * Resend ticket email
+   * POST /api/v1/bookings/<booking_reference>/ticket/resend/
+   */
+  async resendTicket(bookingReference: string): Promise<any> {
+    const response = await api.post(`/bookings/${bookingReference}/ticket/resend/`);
+    return response.data;
+  }
+
+  /**
+   * Calculate pricing breakdown
    */
   calculatePricing(ticketPrice: string | number, numberOfSeats: number) {
     const pricePerSeat = parseDecimal(ticketPrice);
