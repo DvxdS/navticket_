@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/v1/transport/', include('apps.transport.urls')),
     path('api/v1/bookings/', include('apps.bookings.urls')),
     path('api/v1/payments/', include('apps.payments.urls')),
+    path('api/v1/dashboard/', include('apps.dashboard.urls')),
 ]

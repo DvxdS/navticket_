@@ -1,6 +1,9 @@
+// components/layout/Header.tsx
+
 import { useState, useEffect } from 'react';
-import { Bus, Menu, X } from 'lucide-react';
+import { Bus, Menu, X, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CompanyAuthModal } from '@/components/auth/CompanyAuthModal';
 
 interface NavItem {
   label: string;
@@ -10,11 +13,10 @@ interface NavItem {
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [showCompanyAuth, setShowCompanyAuth] = useState<boolean>(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -37,20 +39,17 @@ export default function Header() {
       >
         <div className="mx-auto max-w-7xl px-8">
           <div className="flex h-20 items-center justify-between">
-            
-            {/* Logo - Left with margin */}
+            {/* Logo */}
             <div className="flex items-center">
               <a href="#" className="group flex items-center gap-3">
                 <div className="rounded-full bg-gradient-to-br from-blue-600 to-blue-700 p-3 shadow-md transition-transform duration-200 group-hover:scale-110">
                   <Bus className="h-7 w-7 text-white" />
                 </div>
-                <span className="text-2xl font-bold text-gray-900">
-                  Navticket
-                </span>
+                <span className="text-2xl font-bold text-gray-900">Navticket</span>
               </a>
             </div>
 
-            {/* Navigation - Center in glassmorphism card */}
+            {/* Desktop Navigation */}
             <nav className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
               <div className="flex items-center gap-2 rounded-full bg-white/90 px-3 py-2.5 shadow-xl ring-1 ring-gray-200/50 backdrop-blur-md">
                 {navItems.map((item) => (
@@ -66,22 +65,21 @@ export default function Header() {
               </div>
             </nav>
 
-            {/* Auth Buttons - Right with margin */}
+            {/* Company Login Button + Mobile Menu */}
             <div className="flex items-center gap-3">
-              {/* Desktop buttons */}
+              {/* Desktop button */}
               <div className="hidden items-center gap-3 lg:flex">
                 <Button
                   variant="ghost"
-                  className="font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                  className="flex items-center gap-2 font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+                  onClick={() => setShowCompanyAuth(true)}
                 >
-                  Se connecter
-                </Button>
-                <Button className="bg-gradient-to-r from-blue-600 to-blue-700 font-medium shadow-md hover:from-blue-700 hover:to-blue-800 hover:shadow-lg">
-                  S'inscrire
+                  <Building2 className="h-5 w-5" />
+                  Espace Entreprise
                 </Button>
               </div>
 
-              {/* Mobile menu button */}
+              {/* Mobile menu toggle */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="rounded-lg p-2 text-gray-700 hover:bg-gray-100 lg:hidden"
@@ -98,10 +96,13 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-          <div 
+        <div
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div
             className="absolute right-0 top-20 m-4 w-80 rounded-2xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -117,17 +118,28 @@ export default function Header() {
                 </a>
               ))}
             </nav>
-            <div className="mt-4 flex flex-col gap-2 border-t pt-4">
-              <Button variant="outline" className="w-full font-medium">
-                Se connecter
-              </Button>
-              <Button className="w-full bg-blue-600 font-medium hover:bg-blue-700">
-                S'inscrire
+            <div className="mt-4 border-t pt-4">
+              <Button
+                variant="outline"
+                className="w-full justify-start border-indigo-200 font-medium text-indigo-600 hover:bg-indigo-50"
+                onClick={() => {
+                  setShowCompanyAuth(true);
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <Building2 className="mr-2 h-5 w-5" />
+                Espace Entreprise
               </Button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Company Auth Modal */}
+      <CompanyAuthModal
+        isOpen={showCompanyAuth}
+        onClose={() => setShowCompanyAuth(false)}
+      />
     </>
   );
 }
