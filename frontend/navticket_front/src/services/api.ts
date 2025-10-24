@@ -1,4 +1,7 @@
+// Frontend/src/services/api.ts
+
 import axios from 'axios';
+
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 const api = axios.create({
@@ -9,13 +12,34 @@ const api = axios.create({
   },
 });
 
+// Helper to determine which auth type to use based on current route
+const getAuthTokens = () => {
+  const isDashboard = window.location.pathname.startsWith('/dashboard');
+  
+  if (isDashboard) {
+    // Company authentication for dashboard
+    return {
+      accessToken: localStorage.getItem('company_token'), 
+      refreshToken: localStorage.getItem('company_refresh'), 
+      type: 'company',
+    };
+  } else {
+    // Traveler authentication for customer side
+    return {
+      accessToken: localStorage.getItem('access_token'),
+      refreshToken: localStorage.getItem('refresh_token'),
+      type: 'traveler',
+    };
+  }
+};
+
 // Request interceptor - Add auth token to all requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const { accessToken } = getAuthTokens();
     
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (accessToken && config.headers) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
     
     return config;
@@ -25,6 +49,7 @@ api.interceptors.request.use(
   }
 );
 
+// Response interceptor - Handle token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -35,35 +60,53 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
+        const { refreshToken, type } = getAuthTokens();
         
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
 
+        // Determine refresh endpoint based on auth type
+        const refreshEndpoint = type === 'company' 
+          ? '/auth/company/token/refresh/' 
+          : '/auth/refresh/';
+
         // Try to refresh the token
-        const response = await axios.post(`${BASE_URL}/auth/refresh/`, {
+        const response = await axios.post(`${BASE_URL}${refreshEndpoint}`, {
           refresh: refreshToken,
         });
 
-        // Backend returns { access_token: "..." } or { access: "..." }
-        // Handle both cases
-        const newAccessToken = response.data.access_token || response.data.access;
+        // Backend returns { company_access_token: "..." } or { access: "..." }
+        const newAccessToken = type === 'company'
+          ? response.data.company_access_token || response.data.company_access
+          : response.data.access_token || response.data.access;
 
-        // Save new token
-        localStorage.setItem('access_token', newAccessToken);
+        // Save new token based on type
+        if (type === 'company') {
+          localStorage.setItem('company_token', newAccessToken); 
+        } else {
+          localStorage.setItem('access_token', newAccessToken);
+        }
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed - clear auth and redirect to login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
+        const { type } = getAuthTokens();
         
-        // Dispatch custom event for auth context to handle
-        window.dispatchEvent(new Event('auth:logout'));
+        if (type === 'company') {
+          localStorage.removeItem('company_token'); 
+          localStorage.removeItem('company_refresh'); 
+          localStorage.removeItem('company_user');
+          localStorage.removeItem('user_type');
+          window.location.href = '/company/login';
+        } else {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          window.dispatchEvent(new Event('auth:logout'));
+        }
         
         return Promise.reject(refreshError);
       }
@@ -72,6 +115,8 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+
 
 
 // ===================== TYPES =====================

@@ -27,8 +27,8 @@ export interface CompanyUser {
   }
   
   export interface CompanyLoginResponse {
-    access_token: string;
-    refresh_token: string;
+    company_access_token: string;
+    company_refresh_token: string;
     user: CompanyUser;
   }
   
@@ -49,6 +49,6 @@ export interface CompanyUser {
     message: string;
     company: Company;
     user: CompanyUser;
-    access: string;
-    refresh: string;
+    company_access: string;
+    company_refresh: string;
   }

@@ -18,10 +18,10 @@ class CompanyAuthService {
   async login(data: CompanyLoginRequest): Promise<CompanyLoginResponse> {
     const response = await api.post<CompanyLoginResponse>('/auth/company/login/', data);
 
-    if (response.data.access_token) {
+    if (response.data.company_access_token) {
       this.setTokens(
-        response.data.access_token,
-        response.data.refresh_token,
+        response.data.company_access_token,
+        response.data.company_refresh_token,
         response.data.user
       );
     }
@@ -32,10 +32,10 @@ class CompanyAuthService {
   async register(data: CompanyRegisterRequest): Promise<CompanyRegisterResponse> {
     const response = await api.post<CompanyRegisterResponse>('/auth/company/register/', data);
 
-    if (response.data.access) {
+    if (response.data.company_access) {
       this.setTokens(
-        response.data.access,
-        response.data.refresh,
+        response.data.company_access,
+        response.data.company_refresh,
         response.data.user
       );
     }

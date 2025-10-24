@@ -1,8 +1,7 @@
-// Frontend/src/layouts/DashboardLayout.tsx
-
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { MobileNav } from '@/components/dashboard/MobileNav';
+import { TopBar } from '@/components/dashboard/TopBar';
 
 export const DashboardLayout = () => {
   return (
@@ -10,9 +9,13 @@ export const DashboardLayout = () => {
       {/* Desktop Sidebar */}
       <Sidebar />
       
-      {/* Main Content */}
-      <div className="lg:pl-20 pb-20 lg:pb-0">
-        <main className="min-h-screen">
+      {/* Main Content Area */}
+      <div className="lg:pl-20">
+        {/* Top Bar */}
+        <TopBar />
+        
+        {/* Page Content */}
+        <main className="min-h-[calc(100vh-73px)] pb-20 lg:pb-0">
           <Outlet />
         </main>
       </div>

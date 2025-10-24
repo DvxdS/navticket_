@@ -7,15 +7,35 @@ import { TripDetailsPage } from '@/pages/TripDetailsPage';
 import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
 import { PaymentCancelPage } from './pages/PaymentCancelPage';
 
+// Dashboard imports
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { DashboardOverview } from '@/pages/dashboard/DashboardOverview';
+// Import other dashboard pages when ready
+ import { TripManagement } from '@/pages/dashboard/TripManagements';
+ import { RouteManagement } from '@/pages/dashboard/RouteManagement';
+ import { BookingManagement } from '@/pages/dashboard/BookingManagement';
+
 function App() {
   return (
     <AuthProvider>
       <Routes>
+        {/* Public Routes */}
         <Route path="/" element={<Landing />} />
         <Route path="/search" element={<SearchResults />} />
-        <Route path="/trip/:tripId" element={<TripDetailsPage />} /> {/* Add this */}
+        <Route path="/trip/:tripId" element={<TripDetailsPage />} />
         <Route path="/payment/success" element={<PaymentSuccessPage />} />
         <Route path="/payment/cancel" element={<PaymentCancelPage />} />
+
+        {/* Dashboard Routes */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<DashboardOverview />} />
+          
+          { <Route path="trips" element={<TripManagement />} /> }
+          { <Route path="routes" element={<RouteManagement />} /> }
+          { <Route path="bookings" element={<BookingManagement />} /> }
+          {/* <Route path="analytics" element={<Analytics />} /> */}
+          {/* <Route path="settings" element={<Settings />} /> */}
+        </Route>
       </Routes>
 
       <Toaster 
