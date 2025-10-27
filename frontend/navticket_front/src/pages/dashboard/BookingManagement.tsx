@@ -44,12 +44,18 @@ export const BookingManagement = () => {
     }
   };
 
-  // Calculate stats
-  const confirmedBookings = bookings.filter(b => b.booking_status === 'confirmed').length;
-  const pendingBookings = bookings.filter(b => b.booking_status === 'pending').length;
-  const totalRevenue = bookings
+  // ✅ Safety check: Ensure bookings is an array
+  const safeBookings = Array.isArray(bookings) ? bookings : [];
+
+  // Calculate stats with safe array
+  const confirmedBookings = safeBookings.filter(b => b.booking_status === 'confirmed').length;
+  const pendingBookings = safeBookings.filter(b => b.booking_status === 'pending').length;
+  const totalRevenue = safeBookings
     .filter(b => b.payment_status === 'completed')
-    .reduce((acc, b) => acc + parseFloat(b.total_amount.replace(/[^\d.-]/g, '')), 0);
+    .reduce((acc, b) => {
+      const amount = parseFloat(b.total_amount.replace(/[^\d.-]/g, ''));
+      return acc + (isNaN(amount) ? 0 : amount);
+    }, 0);
 
   if (isLoading) {
     return (
@@ -110,11 +116,11 @@ export const BookingManagement = () => {
       </div>
 
       {/* Bookings Table */}
-      <BookingTable bookings={bookings} />
+      <BookingTable bookings={safeBookings} />
 
       {/* Pagination */}
       <Pagination
-        currentCount={bookings.length}
+        currentCount={safeBookings.length}
         totalCount={pagination.count}
         hasNext={!!pagination.next}
         hasPrevious={!!pagination.previous}

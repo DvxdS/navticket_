@@ -13,8 +13,11 @@ export const RouteManagement = () => {
 
   const { routes, isLoading, toggleRouteStatus } = useRoutes();
 
+  // ✅ Safety check: Ensure routes is an array
+  const safeRoutes = Array.isArray(routes) ? routes : [];
+
   // Filter routes based on search and status
-  const filteredRoutes = routes.filter((route) => {
+  const filteredRoutes = safeRoutes.filter((route) => {
     const matchesSearch = 
       searchQuery === '' ||
       route.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -67,19 +70,19 @@ export const RouteManagement = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard
           title="Routes actives"
-          value={routes.filter(r => r.is_active).length}
+          value={safeRoutes.filter(r => r.is_active).length}
           icon={MapPin}
           color="blue"
         />
         <StatsCard
           title="Total trajets"
-          value={routes.reduce((acc, r) => acc + r.trip_count, 0)}
+          value={safeRoutes.reduce((acc, r) => acc + r.trip_count, 0)}
           icon={Activity}
           color="green"
         />
         <StatsCard
           title="Total réservations"
-          value={routes.reduce((acc, r) => acc + r.booking_count, 0)}
+          value={safeRoutes.reduce((acc, r) => acc + r.booking_count, 0)}
           icon={TrendingUp}
           color="purple"
         />
@@ -96,7 +99,7 @@ export const RouteManagement = () => {
         <div className="bg-white rounded-lg border border-slate-200 px-6 py-4">
           <p className="text-sm text-slate-600">
             Affichage de <span className="font-medium">{filteredRoutes.length}</span> sur{' '}
-            <span className="font-medium">{routes.length}</span> routes
+            <span className="font-medium">{safeRoutes.length}</span> routes
           </p>
         </div>
       )}

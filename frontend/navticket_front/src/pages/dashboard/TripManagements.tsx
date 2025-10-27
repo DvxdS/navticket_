@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTrips } from '@/hooks/useDashboard';
 import { Loader2, Plus, Calendar, Users, MapPin } from 'lucide-react';
-import { StatsCard } from '@/components/dashboard/StatsCard'; // Use existing one
+import { StatsCard } from '@/components/dashboard/StatsCard';
 import { TripFilters } from '@/components/dashboard/trips/TripFilters';
 import { TripTable } from '@/components/dashboard/trips/TripTable';
 import { Pagination } from '@/components/dashboard/Pagination';
@@ -46,6 +46,9 @@ export const TripManagement = () => {
     );
   }
 
+  // ✅ Safety check: Ensure trips is an array
+  const safeTrips = Array.isArray(trips) ? trips : [];
+
   return (
     <div className="p-6 space-y-6">
       {/* Page Header */}
@@ -72,17 +75,17 @@ export const TripManagement = () => {
         onFilterChange={handleFilterChange}
       />
 
-      {/* Stats Cards - Using existing StatsCard with 'title' prop */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard
           title="Trajets actifs"
-          value={trips.filter(t => t.status === 'active').length}
+          value={safeTrips.filter(t => t.status === 'active').length}
           icon={Calendar}
           color="blue"
         />
         <StatsCard
           title="Taux d'occupation moyen"
-          value={`${Math.round(trips.reduce((acc, t) => acc + t.occupancy_rate, 0) / trips.length || 0)}%`}
+          value={`${safeTrips.length > 0 ? Math.round(safeTrips.reduce((acc, t) => acc + t.occupancy_rate, 0) / safeTrips.length) : 0}%`}
           icon={Users}
           color="green"
         />
@@ -95,11 +98,11 @@ export const TripManagement = () => {
       </div>
 
       {/* Trips Table */}
-      <TripTable trips={trips} onToggleStatus={toggleTripStatus} />
+      <TripTable trips={safeTrips} onToggleStatus={toggleTripStatus} />
 
       {/* Pagination */}
       <Pagination
-        currentCount={trips.length}
+        currentCount={safeTrips.length}
         totalCount={pagination.count}
         hasNext={!!pagination.next}
         hasPrevious={!!pagination.previous}

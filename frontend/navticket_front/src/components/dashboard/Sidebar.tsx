@@ -23,7 +23,7 @@ interface NavItem {
 }
 
 export const Sidebar = () => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true); // ✅ Changed to true by default
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useCompanyAuth();
@@ -47,10 +47,12 @@ export const Sidebar = () => {
     navigate(path);
   };
 
+  const toggleSidebar = () => {
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <aside
-      onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => setIsExpanded(false)}
       className={`
         fixed left-0 top-0 h-screen bg-white border-r border-slate-200
         transition-all duration-300 ease-in-out z-40
@@ -59,8 +61,8 @@ export const Sidebar = () => {
     >
       <div className="flex flex-col h-full">
         {/* Logo Section */}
-        <div className="h-20 flex items-center justify-center border-b border-slate-200">
-          <div className="flex items-center gap-3 px-4">
+        <div className="h-20 flex items-center justify-between px-4 border-b border-slate-200">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0">
               <Building2 className="w-6 h-6 text-white" />
             </div>
@@ -70,10 +72,23 @@ export const Sidebar = () => {
               </span>
             )}
           </div>
+          
+          {/* Toggle Button */}
+          <button
+            onClick={toggleSidebar}
+            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+            title={isExpanded ? 'Réduire' : 'Agrandir'}
+          >
+            {isExpanded ? (
+              <ChevronLeft className="w-5 h-5 text-slate-600" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-slate-600" />
+            )}
+          </button>
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 py-6 px-3 space-y-1">
+        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -91,6 +106,7 @@ export const Sidebar = () => {
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }
                 `}
+                title={!isExpanded ? item.label : undefined}
               >
                 <Icon
                   className={`
@@ -127,6 +143,7 @@ export const Sidebar = () => {
                   : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }
             `}
+            title={!isExpanded ? 'Paramètres' : undefined}
           >
             <Settings className="w-6 h-6 flex-shrink-0 group-hover:rotate-90 transition-transform duration-300" />
             {isExpanded && (
@@ -169,17 +186,6 @@ export const Sidebar = () => {
               >
                 <LogOut className="w-6 h-6" />
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* Expand/Collapse Indicator (Optional) */}
-        <div className="absolute -right-3 top-20 hidden lg:block">
-          <div className="w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-sm">
-            {isExpanded ? (
-              <ChevronLeft className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
             )}
           </div>
         </div>
