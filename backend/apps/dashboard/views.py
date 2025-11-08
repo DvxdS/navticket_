@@ -409,6 +409,177 @@ def booking_list_management(request):
     
     return paginator.get_paginated_response(bookings_data)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def voyage_trips_by_date(request):
+    date_param = request.GET.get('date')
+    
+    if date_param:
+        try:
+            target_date = datetime.strptime(date_param, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({
+                'success': False,
+                'message': 'Invalid date format. Use YYYY-MM-DD'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        target_date = timezone.now().date()
+    
+    trips = Trip.objects.filter(
+        departure_date=target_date
+    ).select_related(
+        'route__origin_city',
+        'route__destination_city',
+        'route__bus_company'
+    ).order_by('departure_time')
+    
+    trips_data = [{
+        'id': trip.id,
+        'route': {
+            'origin': trip.route.origin_city.name,
+            'destination': trip.route.destination_city.name,
+            'full_name': f"{trip.route.origin_city.name} → {trip.route.destination_city.name}",
+        },
+        'company': trip.route.bus_company.name,
+        'departure_time': trip.departure_time.strftime('%H:%M'),
+        'arrival_time': trip.arrival_time.strftime('%H:%M'),
+        'price': str(trip.price),
+        'available_seats': trip.available_seats,
+        'total_seats': trip.total_seats,
+        'booked_seats': trip.total_seats - trip.available_seats,
+        'status': trip.status,
+        'bus_type': trip.bus_type,
+    } for trip in trips]
+    
+    return Response({
+        'success': True,
+        'data': trips_data
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def voyage_trip_seats(request, trip_id):
+    try:
+        trip = Trip.objects.get(id=trip_id)
+    except Trip.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Trip not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    from apps.bookings.models import Seat
+    
+    seats = Seat.objects.filter(trip=trip).order_by('row', 'seat_number')
+    
+    seats_data = [{
+        'id': seat.id,
+        'seat_number': seat.seat_number,
+        'row': seat.row,
+        'position': seat.position,
+        'is_available': seat.is_available,
+    } for seat in seats]
+    
+    return Response({
+        'success': True,
+        'data': {
+            'trip_id': trip.id,
+            'total_seats': trip.total_seats,
+            'available_seats': trip.available_seats,
+            'seat_layout': trip.seat_layout,
+            'seats': seats_data,
+        }
+    })
+
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def voyage_create_booking(request):
+    from apps.bookings.models import Booking, Passenger, Seat
+    from apps.payments.models import Payment
+    import secrets
+    
+    trip_id = request.data.get('trip_id')
+    passenger_data = request.data.get('passenger')
+    seat_ids = request.data.get('seat_ids', [])
+    
+    if not trip_id or not passenger_data or not seat_ids:
+        return Response({
+            'success': False,
+            'message': 'Missing required fields'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        trip = Trip.objects.get(id=trip_id)
+    except Trip.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Trip not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    seats = Seat.objects.filter(id__in=seat_ids, trip=trip, is_available=True)
+    
+    if len(seats) != len(seat_ids):
+        return Response({
+            'success': False,
+            'message': 'Some seats are not available'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    booking_reference = f"NVT{secrets.token_hex(4).upper()}"
+    total_amount = trip.price * len(seats)
+    
+    booking = Booking.objects.create(
+        trip=trip,
+        user=request.user,
+        booking_reference=booking_reference,
+        total_passengers=len(seats),
+        ticket_price=trip.price,
+        total_amount=total_amount,
+        booking_status='confirmed',
+        payment_status='completed',
+        contact_phone=passenger_data.get('phone'),
+        contact_email=passenger_data.get('email', '')
+    )
+    
+    for seat in seats:
+        Passenger.objects.create(
+            booking=booking,
+            first_name=passenger_data.get('first_name'),
+            last_name=passenger_data.get('last_name'),
+            phone=passenger_data.get('phone'),
+            email=passenger_data.get('email', ''),
+            id_number=passenger_data.get('id_number', ''),
+            seat_number=seat.seat_number
+        )
+        seat.is_available = False
+        seat.save()
+    
+    trip.available_seats -= len(seats)
+    trip.save()
+    
+    Payment.objects.create(
+        booking=booking,
+        amount=total_amount,
+        payment_method='cash',
+        status='completed'
+    )
+    
+    
+    booking.generate_and_save_qr()
+    booking.send_confirmation_email()
+    
+    return Response({
+        'success': True,
+        'message': 'Booking created successfully',
+        'data': {
+            'booking_reference': booking.booking_reference,
+            'booking_id': booking.id,
+            'total_amount': str(booking.total_amount),
+            'qr_code_data': booking.qr_code_data,
+        }
+    })
 #class PassengerManifestView(APIView):
     """Download passenger manifests for trips"""
     #pass

@@ -10,6 +10,8 @@ PAYMENT_METHOD_CHOICES = [
     ('wave', 'Wave Mobile Money'),
     ('orange_money', 'Orange Money'),
     ('mtn_money', 'MTN Mobile Money'),
+    ('cash', 'Cash'),
+    
 ]
 
 PAYMENT_STATUS_CHOICES = [

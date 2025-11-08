@@ -1,5 +1,3 @@
-# Backend/apps/dashboard/urls.py
-
 from django.urls import path
 from . import views
 
@@ -23,4 +21,9 @@ urlpatterns = [
     
     # Booking Management
     path('bookings/', views.booking_list_management, name='booking-list'),
+    
+    # Voyage (Walk-in Bookings)
+    path('voyage/trips/', views.voyage_trips_by_date, name='voyage-trips'),
+    path('voyage/trips/<int:trip_id>/seats/', views.voyage_trip_seats, name='voyage-trip-seats'),
+    path('voyage/create-booking/', views.voyage_create_booking, name='voyage-create-booking'),
 ]
