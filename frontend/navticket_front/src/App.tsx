@@ -14,6 +14,7 @@ import { DashboardOverview } from '@/pages/dashboard/DashboardOverview';
  import { TripManagement } from '@/pages/dashboard/TripManagements';
  import { RouteManagement } from '@/pages/dashboard/RouteManagement';
  import { BookingManagement } from '@/pages/dashboard/BookingManagement';
+ import { VoyagePage } from '@/pages/dashboard/VoyagePage';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
           { <Route path="trips" element={<TripManagement />} /> }
           { <Route path="routes" element={<RouteManagement />} /> }
           { <Route path="bookings" element={<BookingManagement />} /> }
+          { <Route path="voyage" element={<VoyagePage />} /> }
           {/* <Route path="analytics" element={<Analytics />} /> */}
           {/* <Route path="settings" element={<Settings />} /> */}
         </Route>

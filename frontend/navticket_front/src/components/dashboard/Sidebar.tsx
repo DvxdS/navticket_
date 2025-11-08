@@ -13,6 +13,7 @@ import {
   ChevronRight,
   LogOut,
   Building2,
+  Ticket,
 } from 'lucide-react';
 import { useCompanyAuth } from '@/hooks/useCompanyAuth';
 
@@ -34,6 +35,7 @@ export const Sidebar = () => {
     { icon: Route, label: 'Routes', path: '/dashboard/routes' },
     { icon: Calendar, label: 'Réservations', path: '/dashboard/bookings' },
     { icon: BarChart3, label: 'Statistiques', path: '/dashboard/analytics' },
+    { icon: Ticket, label: 'Voyage', path: '/dashboard/voyage' },
   ];
 
   const isActive = (path: string) => {
