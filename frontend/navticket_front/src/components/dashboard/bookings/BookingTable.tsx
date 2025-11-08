@@ -154,11 +154,11 @@ export const BookingTable = ({ bookings }: BookingTableProps) => {
 
 // Payment Status Badge Component
 interface PaymentStatusBadgeProps {
-  status: 'completed' | 'pending' | 'failed';
+  status: 'completed' | 'pending' | 'failed' | string; 
 }
 
 const PaymentStatusBadge = ({ status }: PaymentStatusBadgeProps) => {
-  const statusConfig = {
+  const statusConfig: Record<string, { label: string; className: string }> = {
     completed: {
       label: 'Payé',
       className: 'bg-green-50 text-green-700 border-green-200',
@@ -173,7 +173,11 @@ const PaymentStatusBadge = ({ status }: PaymentStatusBadgeProps) => {
     },
   };
 
-  const config = statusConfig[status];
+  
+    const config = statusConfig[status] || {
+    label: status,
+    className: 'bg-gray-100 text-gray-800 border-gray-300',
+  };
 
   return (
     <span

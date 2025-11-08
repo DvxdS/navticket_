@@ -50,7 +50,8 @@ class DashboardService {
       `${this.BASE_URL}/trips/`,
       { params }
     );
-    return response.data;
+    
+    return response.data; 
   }
 
   async toggleTripStatus(tripId: number): Promise<{ id: number; status: string }> {
@@ -86,6 +87,7 @@ class DashboardService {
       `${this.BASE_URL}/bookings/`,
       { params }
     );
+    
     return response.data;
   }
 }

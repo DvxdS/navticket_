@@ -247,10 +247,7 @@ def trip_list_management(request):
         'bus_type': trip.bus_type,
     } for trip in paginated_trips]
     
-    return paginator.get_paginated_response({
-        'success': True,
-        'data': trips_data
-    })
+    return paginator.get_paginated_response(trips_data)
 
 
 @api_view(['POST'])
@@ -410,10 +407,7 @@ def booking_list_management(request):
         'created_at': booking.created_at.isoformat(),
     } for booking in paginated_bookings]
     
-    return paginator.get_paginated_response({
-        'success': True,
-        'data': bookings_data
-    })
+    return paginator.get_paginated_response(bookings_data)
 
 #class PassengerManifestView(APIView):
     """Download passenger manifests for trips"""

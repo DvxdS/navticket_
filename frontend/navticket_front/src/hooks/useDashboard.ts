@@ -108,6 +108,7 @@ export const useTrips = (params?: {
     setIsLoading(true);
     try {
       const data = await dashboardService.getTrips({ ...params, page });
+      
       setTrips(data.results);
       setPagination({
         count: data.count,

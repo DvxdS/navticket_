@@ -38,6 +38,35 @@ export const TripManagement = () => {
     }
   };
 
+  
+  const safeTrips = Array.isArray(trips) ? trips : [];
+
+ 
+
+  
+  const calculateOccupancyRate = (trip: any) => {
+    if (!trip.total_seats || trip.total_seats === 0) return 0;
+    const bookedSeats = trip.total_seats - (trip.available_seats || 0);
+    return Math.round((bookedSeats / trip.total_seats) * 100);
+  };
+
+  
+  const activeTrips = safeTrips.filter(trip => {
+    
+    if (trip.status) {
+      return trip.status !== 'cancelled' && trip.status !== 'completed';
+    }
+    
+    return (trip.available_seats || 0) > 0;
+  });
+
+  
+  const avgOccupancyRate = safeTrips.length > 0
+    ? Math.round(
+        safeTrips.reduce((acc, trip) => acc + calculateOccupancyRate(trip), 0) / safeTrips.length
+      )
+    : 0;
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-73px)]">
@@ -45,9 +74,6 @@ export const TripManagement = () => {
       </div>
     );
   }
-
-  // ✅ Safety check: Ensure trips is an array
-  const safeTrips = Array.isArray(trips) ? trips : [];
 
   return (
     <div className="p-6 space-y-6">
@@ -79,19 +105,19 @@ export const TripManagement = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard
           title="Trajets actifs"
-          value={safeTrips.filter(t => t.status === 'active').length}
+          value={activeTrips.length}
           icon={Calendar}
           color="blue"
         />
         <StatsCard
           title="Taux d'occupation moyen"
-          value={`${safeTrips.length > 0 ? Math.round(safeTrips.reduce((acc, t) => acc + t.occupancy_rate, 0) / safeTrips.length) : 0}%`}
+          value={`${avgOccupancyRate}%`}
           icon={Users}
           color="green"
         />
         <StatsCard
           title="Total trajets"
-          value={pagination.count}
+          value={pagination.count || safeTrips.length}
           icon={MapPin}
           color="purple"
         />
@@ -103,7 +129,7 @@ export const TripManagement = () => {
       {/* Pagination */}
       <Pagination
         currentCount={safeTrips.length}
-        totalCount={pagination.count}
+        totalCount={pagination.count || safeTrips.length}
         hasNext={!!pagination.next}
         hasPrevious={!!pagination.previous}
         onNext={handleNextPage}

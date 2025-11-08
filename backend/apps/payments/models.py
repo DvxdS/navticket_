@@ -86,14 +86,14 @@ class Payment(models.Model):
         help_text="Payment page URL for user"
     )
     
-    # Metadata
+    
     metadata = models.JSONField(
         default=dict,
         blank=True,
         help_text="Additional payment data"
     )
     
-    # Timestamps
+    
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
     completed_at = models.DateTimeField(null=True, blank=True)
