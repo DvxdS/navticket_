@@ -6,6 +6,7 @@ import { Loader2, Plus, MapPin, TrendingUp, Activity } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RouteFilters } from '@/components/dashboard/routes/RouteFilters';
 import { RouteTable } from '@/components/dashboard/routes/RouteTable';
+import { RoutesSkeleton } from '@/components/dashboard/routes/RoutesSkeleton';
 
 export const RouteManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,10 +14,10 @@ export const RouteManagement = () => {
 
   const { routes, isLoading, toggleRouteStatus } = useRoutes();
 
-  // ✅ Safety check: Ensure routes is an array
+  
   const safeRoutes = Array.isArray(routes) ? routes : [];
 
-  // Filter routes based on search and status
+  
   const filteredRoutes = safeRoutes.filter((route) => {
     const matchesSearch = 
       searchQuery === '' ||
@@ -33,16 +34,12 @@ export const RouteManagement = () => {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-73px)]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
+    return <RoutesSkeleton />;
   }
 
   return (
     <div className="p-6 space-y-6">
-      {/* Page Header */}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
@@ -58,7 +55,7 @@ export const RouteManagement = () => {
         </button>
       </div>
 
-      {/* Filters */}
+      
       <RouteFilters
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -66,7 +63,7 @@ export const RouteManagement = () => {
         onStatusChange={setStatusFilter}
       />
 
-      {/* Stats Cards */}
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard
           title="Routes actives"
@@ -88,7 +85,7 @@ export const RouteManagement = () => {
         />
       </div>
 
-      {/* Routes Table */}
+     
       <RouteTable 
         routes={filteredRoutes} 
         onToggleStatus={toggleRouteStatus} 

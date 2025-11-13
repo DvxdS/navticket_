@@ -25,5 +25,6 @@ urlpatterns = [
     # Voyage (Walk-in Bookings)
     path('voyage/trips/', views.voyage_trips_by_date, name='voyage-trips'),
     path('voyage/trips/<int:trip_id>/seats/', views.voyage_trip_seats, name='voyage-trip-seats'),
+    path('voyage/trips/<int:trip_id>/passengers/', views.voyage_trip_passengers, name='voyage-trip-passengers'),
     path('voyage/create-booking/', views.voyage_create_booking, name='voyage-create-booking'),
 ]

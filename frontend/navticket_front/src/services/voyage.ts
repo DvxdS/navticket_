@@ -24,6 +24,14 @@ class VoyageService {
     const response = await api.post(`${this.BASE_URL}/create-booking/`, data);
     return response.data;
   }
+
+
+  async getTripPassengers(tripId: number): Promise<TripPassengersResponse> {
+  const response = await api.get(`${this.BASE_URL}/trips/${tripId}/passengers/`);
+  return response.data;
+}
+
+
 }
 
 export default new VoyageService();

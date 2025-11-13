@@ -7,6 +7,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { TripFilters } from '@/components/dashboard/trips/TripFilters';
 import { TripTable } from '@/components/dashboard/trips/TripTable';
 import { Pagination } from '@/components/dashboard/Pagination';
+import { TripsSkeleton } from '@/components/dashboard/trips/TripsSkeleton';
 
 export const TripManagement = () => {
   const [filters, setFilters] = useState({
@@ -67,13 +68,10 @@ export const TripManagement = () => {
       )
     : 0;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-73px)]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+    if (isLoading) {
+      return <TripsSkeleton />;
+    }
+    
 
   return (
     <div className="p-6 space-y-6">

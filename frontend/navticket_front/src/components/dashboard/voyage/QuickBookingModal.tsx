@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { PassengerForm } from './PassengerForm';
 import { SeatSelector } from './SeatSelector';
 import { useCreateBooking } from '@/hooks/useVoyage';
+import { ArrowLeft } from 'lucide-react';
 import type { VoyageTrip, PassengerData } from '@/types/voyage.types';
 
 interface QuickBookingModalProps {
@@ -62,47 +63,55 @@ export const QuickBookingModal = ({ trip, isOpen, onClose, onSuccess }: QuickBoo
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader>
-          <DialogTitle>Créer une réservation</DialogTitle>
-          <DialogDescription>
-            {trip.route.full_name} • {trip.departure_time}
+          <DialogTitle className="text-xl font-bold">
+            {step === 'seats' ? 'Sélection des sièges' : 'Informations du passager'}
+          </DialogTitle>
+          <DialogDescription className="text-slate-600">
+            {trip.route.full_name} • Départ: {trip.departure_time} • Prix: {trip.price} FCFA
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 mt-4">
           {step === 'seats' && (
             <>
               <SeatSelector
                 tripId={trip.id}
                 onSeatsSelected={handleSeatsSelected}
+                maxSeats={4}
               />
-              <Button
-                onClick={handleContinueToPassenger}
-                disabled={selectedSeatIds.length === 0}
-                className="w-full"
-              >
-                Continuer ({selectedSeatIds.length} siège{selectedSeatIds.length > 1 ? 's' : ''})
-              </Button>
+              
+              <div className="flex justify-end pt-4 border-t">
+                <Button
+                  onClick={handleContinueToPassenger}
+                  disabled={selectedSeatIds.length === 0}
+                  size="lg"
+                  className="px-8"
+                >
+                  Continuer avec {selectedSeatIds.length} siège{selectedSeatIds.length > 1 ? 's' : ''}
+                </Button>
+              </div>
             </>
           )}
 
           {step === 'passenger' && (
-            <>
-              <div className="flex items-center gap-2 mb-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setStep('seats')}
-                >
-                  ← Retour aux sièges
-                </Button>
-              </div>
+            <div className="space-y-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setStep('seats')}
+                className="mb-4"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Retour aux sièges
+              </Button>
+              
               <PassengerForm
                 onSubmit={handlePassengerSubmit}
                 isLoading={isCreating}
               />
-            </>
+            </div>
           )}
         </div>
       </DialogContent>

@@ -55,4 +55,33 @@ export interface VoyageTrip {
       total_amount: string;
       qr_code_data: string;
     };
+
+
+  }
+
+
+  export interface TripPassenger {
+    id: number;
+    full_name: string;
+    phone: string;
+    email: string;
+    seat_number: string;
+    booking_reference: string;
+    payment_status: string;
+  }
+  
+  export interface TripPassengersResponse {
+    success: boolean;
+    data: {
+      trip: {
+        id: number;
+        route: string;
+        departure_time: string;
+        departure_date: string;
+        total_seats: number;
+        available_seats: number;
+      };
+      total_passengers: number;
+      passengers: TripPassenger[];
+    };
   }

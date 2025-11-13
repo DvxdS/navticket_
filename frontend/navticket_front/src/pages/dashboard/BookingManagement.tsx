@@ -7,6 +7,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { BookingFilters } from '@/components/dashboard/bookings/BookingFilters';
 import { BookingTable } from '@/components/dashboard/bookings/BookingTable';
 import { Pagination } from '@/components/dashboard/Pagination';
+import { BookingsSkeleton } from '@/components/dashboard/bookings/BookingsSkeleton';
 
 export const BookingManagement = () => {
   const [filters, setFilters] = useState({
@@ -44,7 +45,7 @@ export const BookingManagement = () => {
     }
   };
 
-  // ✅ Safety check: Ensure bookings is an array
+  
   const safeBookings = Array.isArray(bookings) ? bookings : [];
 
   // Calculate stats with safe array
@@ -57,13 +58,9 @@ export const BookingManagement = () => {
       return acc + (isNaN(amount) ? 0 : amount);
     }, 0);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-73px)]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+    if (isLoading) {
+      return <BookingsSkeleton />;
+    }
 
   return (
     <div className="p-6 space-y-6">

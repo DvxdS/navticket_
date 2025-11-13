@@ -175,7 +175,7 @@ def popular_routes(request):
     from django.db.models import Count
     
     routes = Route.objects.annotate(
-        booking_count=Count('trip__booking')
+        booking_count=Count('trips__bookings')
     ).select_related(
         'origin_city',
         'destination_city'
@@ -296,8 +296,8 @@ def route_list_management(request):
         'destination_city',
         'bus_company'
     ).annotate(
-        trip_count=Count('trip'),
-        booking_count=Count('trip__booking')
+        trip_count=Count('trips'),
+        booking_count=Count('trips__bookings')
     ).order_by('-is_active', 'origin_city__name')
     
     routes_data = [{
@@ -308,7 +308,7 @@ def route_list_management(request):
         'company': route.bus_company.name,
         'base_price': str(route.base_price),
         'distance_km': route.distance_km,
-        'estimated_duration': route.estimated_duration,
+        'estimated_duration': route.estimated_duration_minutes,
         'is_active': route.is_active,
         'trip_count': route.trip_count,
         'booking_count': route.booking_count,
@@ -578,6 +578,57 @@ def voyage_create_booking(request):
             'booking_id': booking.id,
             'total_amount': str(booking.total_amount),
             'qr_code_data': booking.qr_code_data,
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def voyage_trip_passengers(request, trip_id):
+    try:
+        trip = Trip.objects.select_related(
+            'route__origin_city',
+            'route__destination_city'
+        ).get(id=trip_id)
+    except Trip.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Trip not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    from apps.bookings.models import Booking, Passenger
+    
+    bookings = Booking.objects.filter(
+        trip=trip,
+        booking_status='confirmed'
+    ).select_related('user').prefetch_related('passengers')
+    
+    passengers_data = []
+    for booking in bookings:
+        for passenger in booking.passengers.all():
+            passengers_data.append({
+                'id': passenger.id,
+                'full_name': passenger.full_name,
+                'phone': passenger.phone,
+                'email': passenger.email,
+                'seat_number': passenger.seat_number,
+                'booking_reference': booking.booking_reference,
+                'payment_status': booking.payment_status,
+            })
+    
+    return Response({
+        'success': True,
+        'data': {
+            'trip': {
+                'id': trip.id,
+                'route': f"{trip.route.origin_city.name} → {trip.route.destination_city.name}",
+                'departure_time': trip.departure_time.strftime('%H:%M'),
+                'departure_date': trip.departure_date.isoformat(),
+                'total_seats': trip.total_seats,
+                'available_seats': trip.available_seats,
+            },
+            'total_passengers': len(passengers_data),
+            'passengers': passengers_data,
         }
     })
 #class PassengerManifestView(APIView):

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTripSeats } from '@/hooks/useVoyage';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User } from 'lucide-react';
 import type { TripSeat } from '@/types/voyage.types';
 
 interface SeatSelectorProps {
@@ -13,21 +13,23 @@ export const SeatSelector = ({ tripId, onSeatsSelected, maxSeats = 4 }: SeatSele
   const { seats, isLoading, fetchSeats } = useTripSeats();
   const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
 
-  useState(() => {
+  useEffect(() => {
     fetchSeats(tripId);
-  });
+  }, [tripId]);
 
-  const toggleSeat = (seatId: number) => {
+  const toggleSeat = (seat: TripSeat) => {
+    if (!seat.is_available) return;
+
     setSelectedSeats(prev => {
       let newSelected: number[];
       
-      if (prev.includes(seatId)) {
-        newSelected = prev.filter(id => id !== seatId);
+      if (prev.includes(seat.id)) {
+        newSelected = prev.filter(id => id !== seat.id);
       } else {
         if (prev.length >= maxSeats) {
           return prev;
         }
-        newSelected = [...prev, seatId];
+        newSelected = [...prev, seat.id];
       }
       
       onSeatsSelected(newSelected);
@@ -35,26 +37,34 @@ export const SeatSelector = ({ tripId, onSeatsSelected, maxSeats = 4 }: SeatSele
     });
   };
 
-  const getSeatStyle = (seat: TripSeat) => {
+  const getSeatButtonClass = (seat: TripSeat) => {
+    const baseClass = 'w-14 h-14 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center';
+    
     if (!seat.is_available) {
-      return 'bg-gray-300 text-gray-500 cursor-not-allowed';
+      return `${baseClass} bg-gray-200 text-gray-400 cursor-not-allowed`;
     }
+    
     if (selectedSeats.includes(seat.id)) {
-      return 'bg-blue-600 text-white hover:bg-blue-700';
+      return `${baseClass} bg-blue-600 text-white shadow-lg scale-105 hover:bg-blue-700`;
     }
-    return 'bg-white border-2 border-slate-300 hover:border-blue-500 text-slate-700';
+    
+    return `${baseClass} bg-white border-2 border-slate-300 text-slate-700 hover:border-blue-500 hover:shadow-md cursor-pointer`;
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
-  if (!seats) {
-    return <div className="text-center py-8 text-slate-500">Aucun siège disponible</div>;
+  if (!seats || seats.seats.length === 0) {
+    return (
+      <div className="text-center py-12 bg-slate-50 rounded-lg">
+        <p className="text-slate-600">Aucun siège disponible</p>
+      </div>
+    );
   }
 
   const groupedSeats = seats.seats.reduce((acc, seat) => {
@@ -65,59 +75,103 @@ export const SeatSelector = ({ tripId, onSeatsSelected, maxSeats = 4 }: SeatSele
     return acc;
   }, {} as Record<number, TripSeat[]>);
 
+  const sortedRows = Object.keys(groupedSeats).map(Number).sort((a, b) => a - b);
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-slate-600">
-          Sélectionnez jusqu'à {maxSeats} sièges
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center pb-4 border-b">
+        <div>
+          <h3 className="font-semibold text-lg text-slate-900">Sélection des sièges</h3>
+          <p className="text-sm text-slate-500">Cliquez sur un siège pour le sélectionner</p>
         </div>
-        <div className="text-sm font-medium text-blue-600">
-          {selectedSeats.length} / {maxSeats} sélectionnés
-        </div>
-      </div>
-
-      <div className="flex justify-center gap-8 mb-4 text-xs">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-white border-2 border-slate-300 rounded"></div>
-          <span>Disponible</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-blue-600 rounded"></div>
-          <span>Sélectionné</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-gray-300 rounded"></div>
-          <span>Occupé</span>
+        <div className="text-right">
+          <p className="text-sm text-slate-600">Maximum {maxSeats} sièges</p>
+          <p className="text-xl font-bold text-blue-600">
+            {selectedSeats.length} / {maxSeats}
+          </p>
         </div>
       </div>
 
-      <div className="bg-slate-50 p-6 rounded-lg max-h-96 overflow-y-auto">
-        <div className="space-y-3">
-          {Object.keys(groupedSeats).map(row => (
-            <div key={row} className="flex items-center gap-2">
-              <div className="w-8 text-xs text-slate-500 font-medium">
-                R{row}
+      {/* Legend */}
+      <div className="flex justify-center gap-6 text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-white border-2 border-slate-300 rounded-lg"></div>
+          <span className="text-slate-600">Disponible</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg"></div>
+          <span className="text-slate-600">Sélectionné</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+          <span className="text-slate-600">Occupé</span>
+        </div>
+      </div>
+
+      {/* Bus Layout */}
+      <div className="bg-gradient-to-b from-slate-50 to-white p-6 rounded-xl border-2 border-slate-200">
+        {/* Driver indicator */}
+        <div className="flex justify-end mb-4 pb-4 border-b-2 border-dashed border-slate-300">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <User className="w-4 h-4" />
+            <span>Chauffeur</span>
+          </div>
+        </div>
+
+        {/* Seats Grid */}
+        <div className="space-y-4">
+          {sortedRows.map(row => {
+            const rowSeats = groupedSeats[row].sort((a, b) => 
+              a.seat_number.localeCompare(b.seat_number)
+            );
+            
+            return (
+              <div key={row} className="flex items-center gap-3">
+                <div className="w-10 text-sm font-medium text-slate-500">
+                  R{row}
+                </div>
+                <div className="flex gap-2 flex-1 justify-center">
+                  {rowSeats.map((seat, index) => (
+                    <button
+                      key={seat.id}
+                      onClick={() => toggleSeat(seat)}
+                      disabled={!seat.is_available}
+                      className={getSeatButtonClass(seat)}
+                      title={seat.is_available ? `Siège ${seat.seat_number}` : 'Siège occupé'}
+                    >
+                      {seat.seat_number}
+                      {selectedSeats.includes(seat.id) && (
+                        <span className="ml-1">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex gap-2 flex-wrap">
-                {groupedSeats[parseInt(row)].map(seat => (
-                  <button
-                    key={seat.id}
-                    onClick={() => seat.is_available && toggleSeat(seat.id)}
-                    disabled={!seat.is_available}
-                    className={`w-12 h-12 rounded-lg font-medium text-sm transition-all ${getSeatStyle(seat)}`}
-                  >
-                    {seat.seat_number}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      <div className="text-xs text-slate-500 text-center">
-        Configuration: {seats.seat_layout} • {seats.total_seats} sièges au total
-      </div>
+      {/* Selected Seats Summary */}
+      {selectedSeats.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm font-medium text-blue-900 mb-2">Sièges sélectionnés :</p>
+          <div className="flex flex-wrap gap-2">
+            {selectedSeats.map(seatId => {
+              const seat = seats.seats.find(s => s.id === seatId);
+              return seat ? (
+                <span
+                  key={seatId}
+                  className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-medium"
+                >
+                  {seat.seat_number}
+                </span>
+              ) : null;
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

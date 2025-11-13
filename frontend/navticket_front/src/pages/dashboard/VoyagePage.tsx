@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useVoyage } from '@/hooks/useVoyage';
-import { Loader2 } from 'lucide-react';
 import { TripCard } from '@/components/dashboard/voyage/TripCard';
 import { DateSelector } from '@/components/dashboard/voyage/DateSelector';
 import { QuickBookingModal } from '@/components/dashboard/voyage/QuickBookingModal';
 import { TicketDisplayModal } from '@/components/dashboard/voyage/TicketDisplayModal';
+import { PassengersModal } from '@/components/dashboard/voyage/PassengerModal';
+import { VoyageSkeleton } from '@/components/dashboard/voyage/VoyageSkeleton';  // ✅ Add this
 import type { VoyageTrip } from '@/types/voyage.types';
 
 export const VoyagePage = () => {
@@ -12,6 +13,8 @@ export const VoyagePage = () => {
   const [selectedTrip, setSelectedTrip] = useState<VoyageTrip | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [isPassengersModalOpen, setIsPassengersModalOpen] = useState(false);
+  const [selectedTripForPassengers, setSelectedTripForPassengers] = useState<number | null>(null);
   const [bookingResult, setBookingResult] = useState<any>(null);
 
   const handleBookClick = (tripId: number) => {
@@ -20,6 +23,11 @@ export const VoyagePage = () => {
       setSelectedTrip(trip);
       setIsBookingModalOpen(true);
     }
+  };
+
+  const handleViewPassengers = (tripId: number) => {
+    setSelectedTripForPassengers(tripId);
+    setIsPassengersModalOpen(true);
   };
 
   const handleBookingSuccess = (data: any) => {
@@ -35,12 +43,9 @@ export const VoyagePage = () => {
     setSelectedTrip(null);
   };
 
+  // ✅ Replace the Loader2 with skeleton
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-73px)]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
+    return <VoyageSkeleton />;
   }
 
   return (
@@ -70,6 +75,7 @@ export const VoyagePage = () => {
               key={trip.id}
               trip={trip}
               onBookClick={handleBookClick}
+              onViewPassengers={handleViewPassengers}
             />
           ))}
         </div>
@@ -86,6 +92,12 @@ export const VoyagePage = () => {
         isOpen={isTicketModalOpen}
         onClose={handleCloseTicketModal}
         bookingData={bookingResult}
+      />
+
+      <PassengersModal
+        tripId={selectedTripForPassengers}
+        isOpen={isPassengersModalOpen}
+        onClose={() => setIsPassengersModalOpen(false)}
       />
     </div>
   );

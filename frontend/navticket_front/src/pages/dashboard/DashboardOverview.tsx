@@ -12,16 +12,13 @@ import {
   import { StatsCard } from '@/components/dashboard/StatsCard';
   import { RecentBookings } from '@/components/dashboard/RecentBookings';
   import { RevenueChart } from '@/components/dashboard/RevenueChart';
+  import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
   
   export const DashboardOverview = () => {
     const { overview, isLoading, error, refetch } = useDashboard();
   
     if (isLoading) {
-      return (
-        <div className="flex items-center justify-center h-[calc(100vh-73px)]">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
-      );
+      return <DashboardSkeleton />;
     }
   
     if (error) {
